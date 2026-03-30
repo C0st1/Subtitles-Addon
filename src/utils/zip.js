@@ -1,5 +1,5 @@
 const AdmZip = require('adm-zip');
-const { createExtractorFromData } = require('unrar-js');
+const { createExtractorFromData } = require('node-unrar-js'); // Corrected package name
 
 /**
  * Extracts the first SRT or SUB file from a ZIP or RAR buffer.
@@ -21,14 +21,16 @@ async function extractSrt(buffer) {
 
   // Check for RAR Magic Number (Rar!)
   if (buffer.toString('utf8', 0, 4) === 'Rar!') {
-    const extractor = await createExtractorFromData(buffer);
+    const extractor = await createExtractorFromData({ data: buffer }); // Updated for v2.0.2 API
     const list = extractor.getFileList();
-    const srtFile = list.fileHeaders.find(h => 
+    const fileHeaders = Array.from(list.fileHeaders); // Convert generator to array
+    
+    const srtFile = fileHeaders.find(h => 
       h.name.toLowerCase().endsWith('.srt') || h.name.toLowerCase().endsWith('.sub')
     );
     if (!srtFile) throw new Error('No SRT/SUB found in RAR');
     
-    const extracted = extractor.extractFiles([srtFile.name]);
+    const extracted = extractor.extractFiles({ files: [srtFile.name] }); // Updated for v2.0.2 API
     return Buffer.from(extracted.files[0].extraction);
   }
 
