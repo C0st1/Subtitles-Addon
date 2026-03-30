@@ -4,59 +4,291 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configure Subtitle Aggregator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #1e1e1e; color: #fff; }
-    label { display: block; margin-top: 15px; font-weight: bold; }
-    input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #444; background: #333; color: #fff; }
-    button { margin-top: 25px; padding: 12px 20px; background: #8a5a96; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; }
-    button:hover { background: #6b4675; }
-    .links { margin-top: 20px; padding: 15px; background: #2a2a2a; border-radius: 5px; display: none; word-break: break-all; }
-    a { color: #b388ff; }
+    :root {
+      --bg-color: #0f0f13;
+      --card-bg: #1c1c21;
+      --primary: #8a5a96;
+      --primary-hover: #a16baf;
+      --text-main: #f0f0f0;
+      --text-muted: #a0a0a5;
+      --border-color: #2d2d35;
+      --input-bg: #141418;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .container {
+      background: var(--card-bg);
+      max-width: 460px;
+      width: 100%;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-color);
+    }
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 24px;
+      font-weight: 600;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    p.subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 30px;
+      margin-top: 0;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 12px 14px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+      color: var(--text-main);
+      box-sizing: border-box;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus, input[type="password"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(138, 90, 150, 0.15);
+    }
+
+    .help-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: block;
+    }
+
+    .section-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 24px 0;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-top: 20px;
+      background: var(--input-bg);
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      margin-top: 2px;
+      accent-color: var(--primary);
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      margin-bottom: 0;
+      line-height: 1.5;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    button {
+      margin-top: 28px;
+      padding: 14px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .links {
+      margin-top: 24px;
+      padding: 20px;
+      background: var(--input-bg);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      display: none;
+      word-break: break-all;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .links strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .links p {
+      margin: 0 0 20px 0;
+    }
+
+    .links p:last-child {
+      margin-bottom: 0;
+    }
+
+    a.install-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--primary);
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: background 0.2s;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    a.install-btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .manual-url {
+      display: block;
+      background: #000;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #e0b0ff;
+      border: 1px solid #333;
+    }
   </style>
 </head>
 <body>
-  <h2>Subtitle Aggregator Configuration</h2>
-  <form id="configForm">
-    <label>OpenSubtitles API Key (Optional)</label>
-    <input type="password" id="opensubtitles_api_key">
 
-    <label>SubDL API Key</label>
-    <input type="password" id="subdl_api_key">
+  <div class="container">
+    <h2>Subtitle Aggregator</h2>
+    <p class="subtitle">Configure your API keys and preferences</p>
 
-    <label>SubSource API Key</label>
-    <input type="password" id="subsource_api_key">
+    <form id="configForm">
+      
+      <div class="form-group">
+        <label for="opensubtitles_api_key">OpenSubtitles API Key</label>
+        <input type="password" id="opensubtitles_api_key" placeholder="Optional">
+      </div>
 
-    <label>Subs.ro API Key</label>
-    <input type="password" id="subsro_api_key">
+      <div class="form-group">
+        <label for="subdl_api_key">SubDL API Key</label>
+        <input type="password" id="subdl_api_key" placeholder="Required for SubDL">
+      </div>
 
-    <label>Languages (ISO 639-2, comma-separated)</label>
-    <input type="text" id="languages" value="eng,ron">
+      <div class="form-group">
+        <label for="subsource_api_key">SubSource API Key</label>
+        <input type="password" id="subsource_api_key" placeholder="Required for SubSource">
+      </div>
 
-    <label>Enabled Sources (comma-separated)</label>
-    <input type="text" id="enabled_sources" value="opensubtitles,subdl,subsource,subsro">
+      <div class="form-group">
+        <label for="subsro_api_key">Subs.ro API Key</label>
+        <input type="password" id="subsro_api_key" placeholder="Required for Subs.ro">
+      </div>
 
-    <label>
-      <input type="checkbox" id="force_encoding_detection">
-      Force Stremio local encoding detection (fallback for severe diacritic issues)
-    </label>
+      <div class="section-divider"></div>
 
-    <button type="button" onclick="generateLink()">Generate Install Link</button>
-  </form>
+      <div class="form-group">
+        <label for="languages">Languages</label>
+        <input type="text" id="languages" value="eng,ron">
+        <span class="help-text">Comma-separated ISO 639-2 codes (e.g., eng, ron, fre, spa)</span>
+      </div>
 
-  <div class="links" id="linksContainer">
-    <p><strong>Stremio Install Link:</strong><br><a id="stremioLink" href="#">Install</a></p>
-    <p><strong>Manual URL:</strong><br><span id="manualUrl"></span></p>
+      <div class="form-group">
+        <label for="enabled_sources">Enabled Sources</label>
+        <input type="text" id="enabled_sources" value="opensubtitles,subdl,subsource,subsro">
+        <span class="help-text">Comma-separated provider names</span>
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="force_encoding_detection">
+        <label for="force_encoding_detection">
+          Force Stremio local encoding detection
+          <span class="help-text">Use as a fallback for severe Eastern European diacritic issues</span>
+        </label>
+      </div>
+
+      <button type="button" onclick="generateLink()">Generate Install Link</button>
+    </form>
+
+    <div class="links" id="linksContainer">
+      <p>
+        <strong>1. One-Click Install</strong>
+        <a id="stremioLink" href="#" class="install-btn">Install in Stremio</a>
+      </p>
+      <p>
+        <strong>2. Manual URL (Copy/Paste into Stremio Search)</strong>
+        <span id="manualUrl" class="manual-url"></span>
+      </p>
+    </div>
   </div>
 
   <script>
     function generateLink() {
       const config = {
-        opensubtitles_api_key: document.getElementById('opensubtitles_api_key').value,
-        subdl_api_key: document.getElementById('subdl_api_key').value,
-        subsource_api_key: document.getElementById('subsource_api_key').value,
-        subsro_api_key: document.getElementById('subsro_api_key').value,
-        languages: document.getElementById('languages').value,
-        enabled_sources: document.getElementById('enabled_sources').value,
+        opensubtitles_api_key: document.getElementById('opensubtitles_api_key').value.trim(),
+        subdl_api_key: document.getElementById('subdl_api_key').value.trim(),
+        subsource_api_key: document.getElementById('subsource_api_key').value.trim(),
+        subsro_api_key: document.getElementById('subsro_api_key').value.trim(),
+        languages: document.getElementById('languages').value.trim(),
+        enabled_sources: document.getElementById('enabled_sources').value.trim(),
         force_encoding_detection: document.getElementById('force_encoding_detection').checked
       };
 
