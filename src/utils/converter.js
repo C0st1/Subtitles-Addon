@@ -16,6 +16,9 @@ function srtToVtt(srtBuffer) {
 
   let text = iconv.decode(srtBuffer, iconv.encodingExists(encoding) ? encoding : 'utf8');
 
+  // CRITICAL FIX: Strip hidden Byte Order Marks (BOM) which crash Stremio's VTT parser
+  text = text.replace(/^\uFEFF/, '');
+
   // Check if it's already a VTT file
   if (text.trim().startsWith('WEBVTT')) {
     return text;
@@ -27,5 +30,4 @@ function srtToVtt(srtBuffer) {
   return 'WEBVTT\n\n' + text;
 }
 
-// THIS WAS MISSING
 module.exports = { srtToVtt };
