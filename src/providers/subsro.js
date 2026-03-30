@@ -1,17 +1,4 @@
-const { http } = require('../utils/http');
-const { toProviderCode, fromProviderCode } = require('../config/languages');
-
-module.exports = async (params) => {
-  // 1. Destructure type, season, episode, and imdbIdFull
-  const { imdbId, imdbIdFull, type, season, episode, languages, config } = params;
-  const apiKey = config.subsro_api_key || process.env.SUBSRO_API_KEY;
-  if (!apiKey) return [];
-
-  const requestedSubsroLangs = languages.map(l => toProviderCode(l, 'subsro')).filter(Boolean);
-  if (!requestedSubsroLangs.length) return [];
-
-// Try using imdbIdFull (e.g. tt29567915) if imdbId (29567915) still throws a 404 or 403 after fixing headers
-  const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbIdFull}?language=ro`, {
+const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbIdFull}?language=ro`, {
     headers: { 
       'X-Subs-Api-Key': apiKey,
       'User-Agent': 'SubtitleAggregator v1.0.0', 
@@ -19,16 +6,28 @@ module.exports = async (params) => {
     }
   });
 
-  const results = [];
-  
-  // CRITICAL FIX: Ensure the response is an array before trying to loop
-  // If the API returns an error object, we gracefully return an empty array instead of crashing.
-  if (!Array.isArray(res.data)) {
+  // 1. TEMPORARY LOGGING: This will print the API's exact response to your Vercel logs
+  console.log(`SUBSRO RESPONSE for ${imdbIdFull}:`, JSON.stringify(res.data).substring(0, 300));
+
+  // 2. UNWRAP THE JSON ENVELOPE
+  let subsArray = [];
+  if (Array.isArray(res.data)) {
+    subsArray = res.data;
+  } else if (res.data && Array.isArray(res.data.data)) {
+    subsArray = res.data.data; // OpenSubtitles style
+  } else if (res.data && Array.isArray(res.data.collection)) {
+    subsArray = res.data.collection; // Standard REST style
+  } else if (res.data && Array.isArray(res.data.subtitles)) {
+    subsArray = res.data.subtitles; // SubDL style
+  } else {
+    // If it's none of the above, the API couldn't find the movie or returned an error
     return [];
   }
 
-  for (const sub of res.data) {
-    // 2. Add filtering for TV shows
+  const results = [];
+  
+  // 3. Loop over our unwrapped array
+  for (const sub of subsArray) {
     if (type === 'series') {
       if (parseInt(sub.season) !== parseInt(season) || parseInt(sub.episode) !== parseInt(episode)) {
         continue;
