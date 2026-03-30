@@ -100,7 +100,12 @@ module.exports = async (req, res) => {
           const allFiles = await listSrtFiles(fileBuffer);
           
           // Try to find the file that matches the release name we saved in the payload
-          const matchedFile = allFiles.find(f => f.name.includes(payload.fileName)) || allFiles[0];
+          const matchedFile = allFiles.find(f => {
+            const fileName = f.name.toLowerCase();
+            const searchName = payload.fileName.toLowerCase();
+            // Check if the internal file contains the release name or vice-versa
+            return fileName.includes(searchName) || searchName.includes(fileName.replace('.srt', ''));
+          }) || allFiles[0];
           vttContent = srtToVtt(matchedFile.data);
         } catch (e) {
           vttContent = srtToVtt(fileBuffer); 
