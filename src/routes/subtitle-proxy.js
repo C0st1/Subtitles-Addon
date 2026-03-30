@@ -39,16 +39,22 @@ module.exports = async (req, res) => {
           { headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleAggregator v1.0.0' } }
         );
         const fileRes = await axios.get(dlRes.data.link, { responseType: 'arraybuffer' });
-        vttContent = srtToVtt(fileRes.data);
+        
+        // FIX: Convert ArrayBuffer to Node Buffer
+        const fileBuffer = Buffer.from(fileRes.data);
+        vttContent = srtToVtt(fileBuffer);
         break;
       }
       case 'subdl': {
         const fileRes = await axios.get(`https://dl.subdl.com/subtitle/${payload.url}`, { responseType: 'arraybuffer' });
+        
+        // FIX: Convert ArrayBuffer to Node Buffer
+        const fileBuffer = Buffer.from(fileRes.data);
         try {
-          const srtBuffer = extractSrt(fileRes.data);
+          const srtBuffer = extractSrt(fileBuffer);
           vttContent = srtToVtt(srtBuffer);
         } catch (e) {
-          vttContent = srtToVtt(fileRes.data); // Fallback to raw buffer
+          vttContent = srtToVtt(fileBuffer); 
         }
         break;
       }
@@ -61,11 +67,14 @@ module.exports = async (req, res) => {
         }, { headers: { ...(apiKey && { 'apiKey': apiKey }) } });
         
         const fileRes = await axios.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
+        
+        // FIX: Convert ArrayBuffer to Node Buffer
+        const fileBuffer = Buffer.from(fileRes.data);
         try {
-          const srtBuffer = extractSrt(fileRes.data);
+          const srtBuffer = extractSrt(fileBuffer);
           vttContent = srtToVtt(srtBuffer);
         } catch (e) {
-          vttContent = srtToVtt(fileRes.data); // Fallback to raw buffer
+          vttContent = srtToVtt(fileBuffer); 
         }
         break;
       }
@@ -77,11 +86,14 @@ module.exports = async (req, res) => {
           headers: { 'X-Subs-Api-Key': apiKey },
           responseType: 'arraybuffer'
         });
+        
+        // FIX: Convert ArrayBuffer to Node Buffer
+        const fileBuffer = Buffer.from(fileRes.data);
         try {
-          const srtBuffer = extractSrt(fileRes.data);
+          const srtBuffer = extractSrt(fileBuffer);
           vttContent = srtToVtt(srtBuffer);
         } catch (e) {
-          vttContent = srtToVtt(fileRes.data); // Fallback to raw buffer
+          vttContent = srtToVtt(fileBuffer); 
         }
         break;
       }
