@@ -1,7 +1,7 @@
 module.exports = {
-  id: "community.subtitle-aggregator",
+  id: "community.subtitle-hub",
   version: "1.0.0",
-  name: "Subtitle Aggregator",
+  name: "Subtitle Hub",
   logo: "https://raw.githubusercontent.com/C0st1/Subtitles-Addon/refs/heads/main/public/logo.png",
   description: "Fetches subtitles from OpenSubtitles, SubDL, SubSource",
   resources: ["subtitles"],
