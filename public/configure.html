@@ -99,7 +99,70 @@
       margin-bottom: 12px;
     }
 
-    .provider-name { font-size: 14px; font-weight: 600; }
+    .provider-name { 
+      font-size: 14px; 
+      font-weight: 600; 
+      display: flex;
+      align-items: center;
+    }
+
+    /* Tooltip CSS */
+    .tooltip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      font-size: 10px;
+      margin-left: 6px;
+      cursor: help;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .tooltip:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 180px;
+      background-color: #0f172a;
+      color: #f8fafc;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 8px;
+      position: absolute;
+      z-index: 10;
+      bottom: 150%;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.2s;
+      font-weight: 500;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .tooltip .tooltiptext::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #0f172a transparent transparent transparent;
+    }
+
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
 
     .lang-container {
       display: flex;
@@ -233,7 +296,9 @@
       <div class="provider-grid">
         <div class="provider-card">
           <div class="provider-header">
-            <span class="provider-name">OpenSubtitles</span>
+            <span class="provider-name">OpenSubtitles
+              <span class="tooltip">?<span class="tooltiptext">Register at opensubtitles.com</span></span>
+            </span>
             <label class="switch">
               <input type="checkbox" id="check_opensubtitles" checked>
               <span class="slider"></span>
@@ -244,7 +309,9 @@
 
         <div class="provider-card">
           <div class="provider-header">
-            <span class="provider-name">SubDL</span>
+            <span class="provider-name">SubDL
+              <span class="tooltip">?<span class="tooltiptext">Register at subdl.com, then visit the API Key page</span></span>
+            </span>
             <label class="switch">
               <input type="checkbox" id="check_subdl" checked>
               <span class="slider"></span>
@@ -255,7 +322,9 @@
 
         <div class="provider-card">
           <div class="provider-header">
-            <span class="provider-name">SubSource</span>
+            <span class="provider-name">SubSource
+              <span class="tooltip">?<span class="tooltiptext">Register at subsource.net</span></span>
+            </span>
             <label class="switch">
               <input type="checkbox" id="check_subsource" checked>
               <span class="slider"></span>
@@ -266,7 +335,9 @@
 
         <div class="provider-card">
           <div class="provider-header">
-            <span class="provider-name">Subs.ro</span>
+            <span class="provider-name">Subs.ro
+              <span class="tooltip">?<span class="tooltiptext">Free API key available at subs.ro/api</span></span>
+            </span>
             <label class="switch">
               <input type="checkbox" id="check_subsro" checked>
               <span class="slider"></span>
@@ -278,8 +349,8 @@
 
       <span class="section-label">Preferred Languages</span>
       <div class="lang-container" id="langPicker">
-        <div class="lang-chip active" data-code="eng">English</div>
-        <div class="lang-chip active" data-code="ron">Romanian</div>
+        <div class="lang-chip" data-code="eng">English</div>
+        <div class="lang-chip" data-code="ron">Romanian</div>
         <div class="lang-chip" data-code="fre">French</div>
         <div class="lang-chip" data-code="spa">Spanish</div>
         <div class="lang-chip" data-code="ger">German</div>
@@ -321,6 +392,11 @@
       const providers = ['opensubtitles', 'subdl', 'subsource', 'subsro'];
       const enabledSources = providers.filter(p => document.getElementById(`check_${p}`).checked);
       const langs = Array.from(document.querySelectorAll('.lang-chip.active')).map(c => c.dataset.code);
+
+      if (langs.length === 0) {
+        alert("Please select at least one preferred language!");
+        return;
+      }
 
       const config = {
         opensubtitles_api_key: document.getElementById('key_opensubtitles').value.trim(),
