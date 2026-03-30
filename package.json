@@ -1,0 +1,23 @@
+{
+  "name": "stremio-subtitle-aggregator",
+  "version": "1.0.0",
+  "description": "Stremio addon aggregating subtitles from OpenSubtitles, SubDL, SubSource, and Subs.ro",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=18.x"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "axios": "^1.6.8",
+    "chardet": "^2.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "iconv-lite": "^0.6.3",
+    "lru-cache": "^10.2.0",
+    "stremio-addon-sdk": "^1.1.4"
+  }
+}
