@@ -1,6 +1,6 @@
-# Stremio Subtitle Aggregator Addon
+# Stremio Subtitle Hub Addon
 
-A production-ready, serverless Stremio addon that aggregates subtitles from OpenSubtitles, SubDL, SubSource.
+A production-ready, serverless Stremio addon that gets subtitles from OpenSubtitles, SubDL, SubSource.
 
 ## Features
 - **Parallel Fetching**: Queries all 4 providers concurrently with strict timeouts.
