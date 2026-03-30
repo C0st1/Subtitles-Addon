@@ -10,10 +10,14 @@ module.exports = async (params) => {
   const requestedSubsroLangs = languages.map(l => toProviderCode(l, 'subsro')).filter(Boolean);
   if (!requestedSubsroLangs.length) return [];
 
-  // Try using imdbIdFull or keeping imdbId depending on what subs.ro expects currently
-  // If api.subs.ro changed their requirements, imdbIdFull (with "tt") is safer.
-  const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbId}?language=ro`, {
-    headers: { 'X-Subs-Api-Key': apiKey }
+// Try using imdbIdFull (e.g. tt29567915) if imdbId (29567915) still throws a 404 or 403 after fixing headers
+  const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbIdFull}?language=ro`, {
+    headers: { 
+      'X-Subs-Api-Key': apiKey,
+      // CRITICAL: Override the fake Chrome headers from http.js
+      'User-Agent': 'SubtitleAggregator v1.0.0', 
+      'Accept': 'application/json' 
+    }
   });
 
   const results = [];
