@@ -95,20 +95,20 @@ module.exports = async (req, res) => {
         
         const fileBuffer = Buffer.from(fileRes.data);
         try {
-          // Use the new listSrtFiles function instead of just extractSrt
-          const { listSrtFiles } = require('../utils/zip'); 
+          const { listSrtFiles } = require('../utils/zip');
           const allFiles = await listSrtFiles(fileBuffer);
           
-          // Try to find the file that matches the release name we saved in the payload
+          // Improved matching: Normalize names to handle dots/dashes
           const matchedFile = allFiles.find(f => {
-            const fileName = f.name.toLowerCase();
-            const searchName = payload.fileName.toLowerCase();
-            // Check if the internal file contains the release name or vice-versa
-            return fileName.includes(searchName) || searchName.includes(fileName.replace('.srt', ''));
+            const cleanFileName = f.name.toLowerCase().replace('.srt', '').replace(/[._-]/g, ' ');
+            const cleanSearchName = payload.fileName.toLowerCase().replace(/[._-]/g, ' ');
+            
+            return cleanFileName.includes(cleanSearchName) || cleanSearchName.includes(cleanFileName);
           }) || allFiles[0];
+
           vttContent = srtToVtt(matchedFile.data);
         } catch (e) {
-          vttContent = srtToVtt(fileBuffer); 
+          vttContent = srtToVtt(fileBuffer);
         }
         break;
       }
