@@ -1,60 +1,73 @@
 const { http } = require('../utils/http');
 const { toProviderCode, fromProviderCode } = require('../config/languages');
 const logger = require('../utils/logger');
-const { listSrtFiles } = require('../utils/zip');
 
+/**
+ * Subs.ro Provider
+ * Fetches subtitle results from api.subs.ro and formats them for Stremio.
+ */
 module.exports = async (params) => {
+  // 1. Destructure parameters
   const { imdbIdFull, type, season, episode, languages, config } = params;
   const apiKey = config.subsro_api_key || process.env.SUBSRO_API_KEY;
+  
   if (!apiKey) return [];
 
-  const requestedLangs = languages.map(l => toProviderCode(l, 'subsro')).filter(Boolean);
-  if (!requestedLangs.length) return [];
+  // Map requested languages to Subs.ro provider codes
+  const requestedSubsroLangs = languages.map(l => toProviderCode(l, 'subsro')).filter(Boolean);
+  if (!requestedSubsroLangs.length) return [];
 
   try {
+    // Search by IMDB ID as specified in the Subs.ro API documentation
     const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbIdFull}`, {
-      headers: { 'X-Subs-Api-Key': apiKey },
-      timeout: 5000 // 5s search timeout
+      headers: { 
+        'X-Subs-Api-Key': apiKey,
+        'User-Agent': 'SubtitleAggregator v1.0.0', 
+        'Accept': 'application/json' 
+      }
     });
 
-    const items = res.data?.items || [];
     const results = [];
+    
+    // The API returns a SearchResponse object where subtitles are in the 'items' array
+    const items = res.data && res.data.items ? res.data.items : [];
 
     for (const sub of items) {
-      if (type === 'series' && (sub.season != season || sub.episode != episode)) continue;
-      const isoLang = fromProviderCode(sub.language, 'subsro');
-      if (!isoLang || !requestedLangs.includes(sub.language)) continue;
-
-      try {
-        // Fetch ZIP to find the 4 versions
-        const dl = await http.get(`https://api.subs.ro/v1.0/subtitle/${sub.id}/download`, {
-          headers: { 'X-Subs-Api-Key': apiKey },
-          responseType: 'arraybuffer',
-          timeout: 8000 // Don't let a slow ZIP kill the app
-        });
-
-        const files = await listSrtFiles(Buffer.from(dl.data));
-
-        for (const file of files) {
-          results.push({
-            id: Buffer.from(JSON.stringify({ id: sub.id, fileName: file.name })).toString('base64url'),
-            lang: isoLang,
-            provider: 'subsro',
-            releaseName: file.name.split('/').pop() // Show "2160p", "1080p", etc.
-          });
+      // 2. Filter for TV shows if applicable
+      if (type === 'series') {
+        if (sub.season && sub.episode) {
+          if (parseInt(sub.season) !== parseInt(season) || parseInt(sub.episode) !== parseInt(episode)) {
+            continue;
+          }
         }
-      } catch (e) {
-        // Fallback: Show at least one generic entry if ZIP fails
-        results.push({
-          id: Buffer.from(JSON.stringify({ id: sub.id, fileName: sub.title })).toString('base64url'),
-          lang: isoLang,
-          provider: 'subsro',
-          releaseName: sub.title
-        });
       }
+
+      const isoLang = fromProviderCode(sub.language, 'subsro');
+      
+      // Ensure the language is one of the user's requested languages
+      if (!isoLang || !requestedSubsroLangs.includes(sub.language)) continue;
+
+      /** * UPDATED: Include fileName in the payload.
+       * This allows the subtitle-proxy to match the correct file inside the ZIP 
+       * when there are multiple versions (1080p, 4K, etc.) available.
+       */
+      const releaseName = sub.title || sub.description || 'Unknown Release';
+      const payload = Buffer.from(JSON.stringify({ 
+        id: sub.id, 
+        fileName: releaseName 
+      })).toString('base64url');
+      
+      results.push({
+        id: payload,
+        lang: isoLang,
+        provider: 'subsro',
+        releaseName: releaseName
+      });
     }
+    
     return results;
-  } catch (err) {
+  } catch (error) {
+    logger.error('subsro', `Provider search failed: ${error.message}`, { imdbId: imdbIdFull });
     return [];
   }
 };
