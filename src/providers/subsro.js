@@ -11,22 +11,27 @@ module.exports = async (params) => {
   if (!requestedSubsroLangs.length) return [];
 
 // Try using imdbIdFull (e.g. tt29567915) if imdbId (29567915) still throws a 404 or 403 after fixing headers
-  const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbIdFull}?language=ro`, {
+  const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbId}?language=ro`, {
     headers: { 
       'X-Subs-Api-Key': apiKey,
-      // CRITICAL: Override the fake Chrome headers from http.js
       'User-Agent': 'SubtitleAggregator v1.0.0', 
       'Accept': 'application/json' 
     }
   });
 
   const results = [];
-  for (const sub of res.data || []) {
-    // 2. Add filtering for TV shows! 
-    // If it's a series, make sure the subtitle matches the season and episode.
+  
+  // CRITICAL FIX: Ensure the response is an array before trying to loop
+  // If the API returns an error object, we gracefully return an empty array instead of crashing.
+  if (!Array.isArray(res.data)) {
+    return [];
+  }
+
+  for (const sub of res.data) {
+    // 2. Add filtering for TV shows
     if (type === 'series') {
       if (parseInt(sub.season) !== parseInt(season) || parseInt(sub.episode) !== parseInt(episode)) {
-        continue; // Skip subtitles that don't match the requested episode
+        continue;
       }
     }
 
