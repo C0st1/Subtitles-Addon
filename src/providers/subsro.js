@@ -2,20 +2,30 @@ const { http } = require('../utils/http');
 const { toProviderCode, fromProviderCode } = require('../config/languages');
 
 module.exports = async (params) => {
-  const { imdbId, languages, config } = params;
+  // 1. Destructure type, season, episode, and imdbIdFull
+  const { imdbId, imdbIdFull, type, season, episode, languages, config } = params;
   const apiKey = config.subsro_api_key || process.env.SUBSRO_API_KEY;
-  if (!apiKey) return[];
+  if (!apiKey) return [];
 
-  // Subs.ro primarily serves Romanian, but we check if requested languages match
   const requestedSubsroLangs = languages.map(l => toProviderCode(l, 'subsro')).filter(Boolean);
-  if (!requestedSubsroLangs.length) return[];
+  if (!requestedSubsroLangs.length) return [];
 
+  // Try using imdbIdFull or keeping imdbId depending on what subs.ro expects currently
+  // If api.subs.ro changed their requirements, imdbIdFull (with "tt") is safer.
   const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbId}?language=ro`, {
     headers: { 'X-Subs-Api-Key': apiKey }
   });
 
   const results = [];
-  for (const sub of res.data ||[]) {
+  for (const sub of res.data || []) {
+    // 2. Add filtering for TV shows! 
+    // If it's a series, make sure the subtitle matches the season and episode.
+    if (type === 'series') {
+      if (parseInt(sub.season) !== parseInt(season) || parseInt(sub.episode) !== parseInt(episode)) {
+        continue; // Skip subtitles that don't match the requested episode
+      }
+    }
+
     const isoLang = fromProviderCode(sub.language, 'subsro');
     if (!isoLang || !requestedSubsroLangs.includes(sub.language)) continue;
 
