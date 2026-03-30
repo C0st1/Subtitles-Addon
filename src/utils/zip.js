@@ -2,51 +2,70 @@ const AdmZip = require('adm-zip');
 const { createExtractorFromData } = require('node-unrar-js');
 
 /**
- * Extracts the first SRT or SUB file from a ZIP or RAR buffer.
+ * Lists all SRT files found within a ZIP or RAR buffer.
+ * Returns an array of objects containing the filename and the file data.
  * @param {Buffer} buffer 
- * @returns {Promise<Buffer>}
+ * @returns {Promise<Array<{name: string, data: Buffer}>>}
  */
-async function extractSrt(buffer) {
+async function listSrtFiles(buffer) {
+  const srtFiles = [];
+
   // Check for ZIP Magic Number (PK..)
   if (buffer[0] === 0x50 && buffer[1] === 0x4B) {
     const zip = new AdmZip(buffer);
     const entries = zip.getEntries();
-    const srtEntry = entries.find(e => 
-      !e.isDirectory && 
-      (e.entryName.toLowerCase().endsWith('.srt') || e.entryName.toLowerCase().endsWith('.sub'))
-    );
-    if (!srtEntry) throw new Error('No SRT/SUB found in ZIP');
-    return srtEntry.getData();
+    
+    entries.forEach(entry => {
+      if (!entry.isDirectory && entry.entryName.toLowerCase().endsWith('.srt')) {
+        srtFiles.push({
+          name: entry.entryName,
+          data: entry.getData()
+        });
+      }
+    });
+    return srtFiles;
   }
 
   // Check for RAR Magic Number (Rar!)
   if (buffer.toString('utf8', 0, 4) === 'Rar!') {
-    // node-unrar-js prefers Uint8Array
     const uint8Array = new Uint8Array(buffer);
     const extractor = await createExtractorFromData({ data: uint8Array });
     
-    // Convert generator to an array of headers
     const list = extractor.getFileList();
     const fileHeaders = Array.from(list.fileHeaders); 
     
-    const srtFile = fileHeaders.find(h => 
-      h.name.toLowerCase().endsWith('.srt') || h.name.toLowerCase().endsWith('.sub')
+    const targetHeaders = fileHeaders.filter(h => 
+      !h.flags.directory && h.name.toLowerCase().endsWith('.srt')
     );
-    if (!srtFile) throw new Error('No SRT/SUB found in RAR');
-    
-    // FIX: Method is .extract() and returns a generator in 'files'
-    const extracted = extractor.extract({ files: [srtFile.name] });
-    const extractedFiles = Array.from(extracted.files); 
-    
-    if (!extractedFiles.length || !extractedFiles[0].extraction) {
-      throw new Error('Failed to extract file content from RAR');
+
+    for (const header of targetHeaders) {
+      const extracted = extractor.extract({ files: [header.name] });
+      const extractedFiles = Array.from(extracted.files);
+      
+      if (extractedFiles.length && extractedFiles[0].extraction) {
+        srtFiles.push({
+          name: header.name,
+          data: Buffer.from(extractedFiles[0].extraction)
+        });
+      }
     }
-    
-    return Buffer.from(extractedFiles[0].extraction);
+    return srtFiles;
   }
 
-  // If not an archive, return original buffer (assume it's raw SRT)
-  return buffer;
+  // If it's not an archive, assume the buffer is a raw SRT file
+  // and return it with a generic name
+  return [{ name: 'original.srt', data: buffer }];
 }
 
-module.exports = { extractSrt };
+/**
+ * Compatibility wrapper to extract the first SRT/SUB file (Legacy support)
+ * @param {Buffer} buffer 
+ * @returns {Promise<Buffer>}
+ */
+async function extractSrt(buffer) {
+  const files = await listSrtFiles(buffer);
+  if (files.length === 0) throw new Error('No SRT found in archive');
+  return files[0].data;
+}
+
+module.exports = { listSrtFiles, extractSrt };
