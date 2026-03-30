@@ -4,7 +4,7 @@ const subtitlesHandler = require('./handlers/subtitles');
 
 const builder = new addonBuilder(manifest);
 
-// FIX: Changed defineSubtitleHandler to defineSubtitlesHandler
-builder.defineSubtitlesHandler(subtitlesHandler);
+// Fix: Must be singular 'Subtitle' to match the SDK API
+builder.defineSubtitleHandler(subtitlesHandler);
 
 module.exports = builder.getInterface();
