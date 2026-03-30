@@ -2,7 +2,7 @@ const axios = require('axios');
 const https = require('https');
 
 const http = axios.create({
-  timeout: 5000, // Reduced from 10s to 5s to fail faster and let other providers finish
+  timeout: 5000, // Strict 5-second timeout
   httpsAgent: new https.Agent({ 
     keepAlive: true, 
     maxSockets: 50, 
@@ -17,18 +17,7 @@ const http = axios.create({
   }
 });
 
-http.interceptors.response.use(null, async (error) => {
-  const config = error.config;
-  if (!config || config.retry >= 1) return Promise.reject(error);
-  
-  config.retry = (config.retry || 0) + 1;
-  
-  if (error.response && [401, 404].includes(error.response.status)) {
-    return Promise.reject(error); 
-  }
-  
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return http(config);
-});
+// Removed the retry interceptor entirely. 
+// Serverless functions should fail fast rather than retry in the background.
 
 module.exports = { http };
