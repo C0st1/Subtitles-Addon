@@ -36,7 +36,7 @@ module.exports = async (req, res) => {
         
         const dlRes = await http.post('https://api.opensubtitles.com/api/v1/download', 
           { file_id: payload.id },
-          { headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleAggregator v1.0.0', 'Accept': 'application/json' } }
+          { headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleHub v1.0.0', 'Accept': 'application/json' } }
         );
         
         if (!dlRes.data.link) throw new Error("OpenSubtitles API denied the download link.");
