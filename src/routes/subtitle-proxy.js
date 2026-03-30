@@ -1,11 +1,11 @@
 const axios = require('axios');
-const LRU = require('lru-cache'); // Changed from { LRUCache }
+const LRU = require('lru-cache');
 const logger = require('../utils/logger');
 const { srtToVtt } = require('../utils/converter');
 const { extractSrt } = require('../utils/zip');
 
 // Ephemeral L2 Cache for VTT content
-const vttCache = new LRU({ // Changed from new LRUCache
+const vttCache = new LRU({
   max: 500,
   ttl: 1000 * 60 * 60 // 1 hour
 });
@@ -61,12 +61,11 @@ module.exports = async (req, res) => {
         }, { headers: { ...(apiKey && { 'apiKey': apiKey }) } });
         
         const fileRes = await axios.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
-        // SubSource usually returns ZIP or SRT directly. We try to unzip, if it fails, assume it's SRT.
         try {
           const srtBuffer = extractSrt(fileRes.data);
           vttContent = srtToVtt(srtBuffer);
         } catch (e) {
-          vttContent = srtToVtt(fileRes.data);
+          vttContent = srtToVtt(fileRes.data); // Fallback to raw buffer
         }
         break;
       }
@@ -86,6 +85,9 @@ module.exports = async (req, res) => {
         }
         break;
       }
+      default:
+        throw new Error("Unknown provider");
+    }
 
     vttCache.set(cacheKey, vttContent);
 
