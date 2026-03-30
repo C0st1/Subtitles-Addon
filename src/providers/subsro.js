@@ -46,14 +46,23 @@ module.exports = async (params) => {
       // Ensure the language is one of the user's requested languages
       if (!isoLang || !requestedSubsroLangs.includes(sub.language)) continue;
 
+      /**
+       * To show multiple versions in Stremio, we use the 'title' or 'description' 
+       * from the API which usually contains strings like "1080p", "4K", or "HDR".
+       */
+      const releaseName = sub.title || sub.description || 'Unknown Release';
+
       // Payload contains the ID needed for the download proxy
-      const payload = Buffer.from(JSON.stringify({ id: sub.id })).toString('base64url');
+      const payload = Buffer.from(JSON.stringify({ 
+        id: sub.id,
+        isZip: true // Hint to the proxy that this might be an archive
+      })).toString('base64url');
       
       results.push({
         id: payload,
         lang: isoLang,
         provider: 'subsro',
-        releaseName: sub.title || sub.description || 'Unknown Release'
+        releaseName: releaseName
       });
     }
     
