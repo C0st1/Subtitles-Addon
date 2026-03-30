@@ -74,7 +74,7 @@ module.exports = async (args) => {
       }
 
       return {
-        id: `${sub.provider}-${sub.id}-${sub.lang}`,
+        id: `${sub.provider}-${sub.id}-${sub.lang}-${Buffer.from(sub.releaseName).toString('hex')}`,
         url: proxyUrl,
         lang: sub.lang
       };
