@@ -80,38 +80,6 @@ module.exports = async (req, res) => {
         }
         break;
       }
-      case 'subsro': {
-        const apiKey = config.subsro_api_key || process.env.SUBSRO_API_KEY;
-        if (!apiKey) throw new Error("Missing Subs.ro API Key");
-        
-        const fileRes = await http.get(`https://api.subs.ro/v1.0/subtitle/${payload.id}/download`, {
-          headers: { 
-            'X-Subs-Api-Key': apiKey,
-            'User-Agent': 'SubtitleAggregator v1.0.0',
-            'Accept': '*/*'
-          },
-          responseType: 'arraybuffer'
-        });
-        
-        const fileBuffer = Buffer.from(fileRes.data);
-        try {
-          const { listSrtFiles } = require('../utils/zip');
-          const allFiles = await listSrtFiles(fileBuffer);
-          
-          // Improved matching: Normalize names to handle dots/dashes
-          const matchedFile = allFiles.find(f => {
-            const cleanFileName = f.name.toLowerCase().replace('.srt', '').replace(/[._-]/g, ' ');
-            const cleanSearchName = payload.fileName.toLowerCase().replace(/[._-]/g, ' ');
-            
-            return cleanFileName.includes(cleanSearchName) || cleanSearchName.includes(cleanFileName);
-          }) || allFiles[0];
-
-          vttContent = srtToVtt(matchedFile.data);
-        } catch (e) {
-          vttContent = srtToVtt(fileBuffer);
-        }
-        break;
-      }
       default:
         throw new Error("Unknown provider");
     }
