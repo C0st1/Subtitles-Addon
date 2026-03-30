@@ -1,11 +1,11 @@
 const axios = require('axios');
-const { LRUCache } = require('lru-cache');
+const LRU = require('lru-cache'); // Changed from { LRUCache }
 const logger = require('../utils/logger');
 const { srtToVtt } = require('../utils/converter');
 const { extractSrt } = require('../utils/zip');
 
 // Ephemeral L2 Cache for VTT content
-const vttCache = new LRUCache({
+const vttCache = new LRU({ // Changed from new LRUCache
   max: 500,
   ttl: 1000 * 60 * 60 // 1 hour
 });
