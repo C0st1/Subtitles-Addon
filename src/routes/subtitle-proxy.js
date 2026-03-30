@@ -1,33 +1,33 @@
 const LRU = require('lru-cache');
 const logger = require('../utils/logger');
-const { srtToVtt } = require('../utils/converter');
+const { srtToVtt, decodeSrt } = require('../utils/converter');
 const { extractSrt } = require('../utils/zip');
 const { http } = require('../utils/http');
 
-// Ephemeral L2 Cache for VTT content
-const vttCache = new LRU({
-  max: 2000, // Increase cache size
-  ttl: 1000 * 60 * 60 * 24 // Increase to 24 hours
+// Ephemeral L2 Cache
+const cache = new LRU({
+  max: 2000, 
+  ttl: 1000 * 60 * 60 * 24 
 });
 
 module.exports = async (req, res) => {
-  const { provider, subtitleId } = req.params;
+  const { provider, subtitleId, ext } = req.params;
+  const isSrt = ext === 'srt';
   const configBase64 = req.query.config;
 
   try {
-    const cacheKey = `vtt:${provider}:${subtitleId}`;
-    if (vttCache.has(cacheKey)) {
-      logger.info('proxy', 'Cache hit', { provider, subtitleId });
-      res.setHeader('Content-Type', 'text/vtt; charset=utf-8');
+    const cacheKey = `${ext}:${provider}:${subtitleId}`;
+    if (cache.has(cacheKey)) {
+      res.setHeader('Content-Type', isSrt ? 'text/plain; charset=utf-8' : 'text/vtt; charset=utf-8');
       res.setHeader('Access-Control-Allow-Origin', '*');
-      return res.send(vttCache.get(cacheKey));
+      return res.send(cache.get(cacheKey));
     }
 
     if (!configBase64) throw new Error("Missing config parameter");
     const config = JSON.parse(Buffer.from(configBase64, 'base64url').toString('utf8'));
     const payload = JSON.parse(Buffer.from(subtitleId, 'base64url').toString('utf8'));
 
-    let vttContent = '';
+    let subBuffer;
 
     switch (provider) {
       case 'opensubtitles': {
@@ -39,10 +39,10 @@ module.exports = async (req, res) => {
           { headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleHub v1.0.0', 'Accept': 'application/json' } }
         );
         
-        if (!dlRes.data.link) throw new Error("OpenSubtitles API denied the download link.");
+        if (!dlRes?.data?.link) throw new Error("OpenSubtitles API denied the download link.");
         
         const fileRes = await http.get(dlRes.data.link, { responseType: 'arraybuffer' });
-        vttContent = srtToVtt(Buffer.from(fileRes.data));
+        subBuffer = Buffer.from(fileRes.data);
         break;
       }
       case 'subdl': {
@@ -51,12 +51,11 @@ module.exports = async (req, res) => {
             : `https://dl.subdl.com${payload.url.startsWith('/') ? '' : '/'}${payload.url}`;
             
         const fileRes = await http.get(dlUrl, { responseType: 'arraybuffer' });
-        const fileBuffer = Buffer.from(fileRes.data);
-        try {
-          // Added await here
-          vttContent = srtToVtt(await extractSrt(fileBuffer));
-        } catch (e) {
-          vttContent = srtToVtt(fileBuffer); 
+        subBuffer = Buffer.from(fileRes.data);
+        
+        // Safely check for ZIP/RAR magic bytes before extracting
+        if ((subBuffer[0] === 0x50 && subBuffer[1] === 0x4B) || subBuffer.toString('utf8', 0, 4) === 'Rar!') {
+          subBuffer = await extractSrt(subBuffer, payload.lang);
         }
         break;
       }
@@ -68,15 +67,13 @@ module.exports = async (req, res) => {
           id: payload.id
         }, { headers: { ...(apiKey && { 'apiKey': apiKey }) } });
         
-        if (!dlRes.data.subUrl) throw new Error("SubSource did not return a valid download URL.");
+        if (!dlRes?.data?.subUrl) throw new Error("SubSource did not return a valid download URL.");
         
         const fileRes = await http.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
-        const fileBuffer = Buffer.from(fileRes.data);
-        try {
-          // Added await here
-          vttContent = srtToVtt(await extractSrt(fileBuffer));
-        } catch (e) {
-          vttContent = srtToVtt(fileBuffer); 
+        subBuffer = Buffer.from(fileRes.data);
+        
+        if ((subBuffer[0] === 0x50 && subBuffer[1] === 0x4B) || subBuffer.toString('utf8', 0, 4) === 'Rar!') {
+          subBuffer = await extractSrt(subBuffer, payload.lang);
         }
         break;
       }
@@ -84,11 +81,14 @@ module.exports = async (req, res) => {
         throw new Error("Unknown provider");
     }
 
-    vttCache.set(cacheKey, vttContent);
+    // Serve either pure Decoded SRT (for local proxy) or VTT (for direct playback)
+    const finalContent = isSrt ? decodeSrt(subBuffer) : srtToVtt(subBuffer);
 
-    res.setHeader('Content-Type', 'text/vtt; charset=utf-8');
+    cache.set(cacheKey, finalContent);
+
+    res.setHeader('Content-Type', isSrt ? 'text/plain; charset=utf-8' : 'text/vtt; charset=utf-8');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(vttContent);
+    res.send(finalContent);
 
   } catch (error) {
     logger.error('proxy', `Failed to serve subtitle: ${error.message}`, { provider });
