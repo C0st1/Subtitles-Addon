@@ -3,13 +3,11 @@ const logger = require('../utils/logger');
 const openSubtitles = require('../providers/opensubtitles');
 const subdl = require('../providers/subdl');
 const subsource = require('../providers/subsource');
-const subsro = require('../providers/subsro');
 
 const PROVIDERS = {
   opensubtitles: openSubtitles,
   subdl: subdl,
   subsource: subsource,
-  subsro: subsro
 };
 
 /**
@@ -30,7 +28,7 @@ module.exports = async (args) => {
 
     const parsedId = parseId(id);
     const languages = (config.languages || 'eng').split(',').map(l => l.trim().toLowerCase());
-    const enabledSources = (config.enabled_sources || 'opensubtitles,subdl,subsource,subsro')
+    const enabledSources = (config.enabled_sources || 'opensubtitles,subdl,subsource')
       .split(',').map(s => s.trim().toLowerCase());
 
     const fetchParams = {
