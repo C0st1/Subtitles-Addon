@@ -13,11 +13,11 @@
   "dependencies": {
     "adm-zip": "^0.5.10",
     "axios": "^1.6.8",
-    "chardet": "^2.0.0",
+    "chardet": "^1.4.1",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "iconv-lite": "^0.6.3",
-    "lru-cache": "^10.2.0",
+    "lru-cache": "^7.14.1",
     "stremio-addon-sdk": "^1.1.4"
   }
 }
