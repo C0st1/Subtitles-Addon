@@ -61,24 +61,26 @@ module.exports = async (args) => {
     const configBase64 = Buffer.from(JSON.stringify(config)).toString('base64url');
     
     const formattedSubtitles = subtitles.map(sub => {
-      const host = config.addon_host || 'localhost:7000';
-      const protocol = host.includes('localhost') ? 'http' : 'https';
-      const baseUrl = `${protocol}://${host}`;
-      
-      let proxyUrl = `${baseUrl}/subtitle/${sub.provider}/${sub.id}.vtt?config=${configBase64}`;
+  const host = config.addon_host || 'localhost:7000';
+  const protocol = host.includes('localhost') ? 'http' : 'https';
+  const baseUrl = `${protocol}://${host}`;
+  
+  // Use the provider's specific payload (which already contains the id and fileName)
+  // This ensures the proxy knows exactly which file to pick
+  let proxyUrl = `${baseUrl}/subtitle/${sub.provider}/${sub.id}.vtt?config=${configBase64}`;
 
-      if (config.force_encoding_detection) {
-        proxyUrl = `http://127.0.0.1:11470/subtitles.vtt?from=${encodeURIComponent(proxyUrl)}`;
-      }
+  if (config.force_encoding_detection) {
+    proxyUrl = `http://127.0.0.1:11470/subtitles.vtt?from=${encodeURIComponent(proxyUrl)}`;
+  }
 
-      return {
-        // FIX: We add a hash of the release name to the ID to ensure 
-        // Stremio doesn't merge the 1080p and 4K versions into one entry.
-        id: `${sub.provider}-${sub.id}-${sub.lang}-${Buffer.from(sub.releaseName).toString('hex').slice(0, 8)}`,
-        url: proxyUrl,
-        lang: sub.lang
-      };
-    });
+  return {
+    // Generate a unique ID for Stremio using the sub.id (which is base64) 
+    // plus a small slice of the release name to ensure it's unique in the UI
+    id: `${sub.provider}-${sub.id.slice(0, 16)}-${Buffer.from(sub.releaseName).toString('hex').slice(0, 8)}`,
+    url: proxyUrl,
+    lang: sub.lang
+  };
+});
 
     return { subtitles: formattedSubtitles };
   } catch (error) {
