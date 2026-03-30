@@ -1,16 +1,20 @@
 {
   "version": 2,
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/src/index.js"
+      "src": "src/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": "node_modules/node-unrar-js/**/*.wasm"
+      }
     }
   ],
-  "functions": {
-    "src/index.js": {
-      "includeFiles": "node_modules/node-unrar-js/**/*.wasm"
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/index.js"
     }
-  },
+  ],
   "env": {
     "NODE_ENV": "production"
   }
