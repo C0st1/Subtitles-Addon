@@ -106,6 +106,7 @@
       align-items: center;
     }
 
+    /* Interactive Tooltip CSS */
     .tooltip {
       position: relative;
       display: inline-flex;
@@ -122,40 +123,46 @@
       transition: all 0.2s;
     }
 
-    .tooltip:hover {
-      background: var(--primary);
-      color: white;
-    }
-
     .tooltip .tooltiptext {
       visibility: hidden;
-      width: 180px;
+      width: 200px;
       background-color: #0f172a;
       color: #f8fafc;
       text-align: center;
       border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      padding: 8px;
+      border-radius: 8px;
+      padding: 12px;
       position: absolute;
       z-index: 10;
-      bottom: 150%;
+      bottom: 125%; /* Space for the mouse to bridge the gap */
       left: 50%;
       transform: translateX(-50%);
       opacity: 0;
-      transition: opacity 0.2s;
+      transition: opacity 0.3s;
       font-weight: 500;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+      pointer-events: auto; /* Allows clicking inside tooltip */
     }
 
-    .tooltip .tooltiptext::after {
+    /* Invisible bridge to keep tooltip open while moving mouse to it */
+    .tooltip::after {
       content: "";
       position: absolute;
-      top: 100%;
-      left: 50%;
-      margin-left: -5px;
-      border-width: 5px;
-      border-style: solid;
-      border-color: #0f172a transparent transparent transparent;
+      width: 100%;
+      height: 20px;
+      bottom: 100%;
+      left: 0;
+      display: none;
+    }
+
+    .tooltip:hover::after { display: block; }
+
+    .tooltiptext a {
+      color: var(--primary);
+      text-decoration: underline;
+      display: block;
+      margin-top: 6px;
+      font-size: 11px;
     }
 
     .tooltip:hover .tooltiptext {
@@ -296,7 +303,12 @@
         <div class="provider-card">
           <div class="provider-header">
             <span class="provider-name">OpenSubtitles
-              <span class="tooltip">?<span class="tooltiptext">Register at opensubtitles.com</span></span>
+              <span class="tooltip">?
+                <div class="tooltiptext">
+                  Register for a free account to get your API key.
+                  <a href="https://www.opensubtitles.com/en/consumers" target="_blank">Get API Key →</a>
+                </div>
+              </span>
             </span>
             <label class="switch">
               <input type="checkbox" id="check_opensubtitles" checked>
@@ -309,7 +321,12 @@
         <div class="provider-card">
           <div class="provider-header">
             <span class="provider-name">SubDL
-              <span class="tooltip">?<span class="tooltiptext">Register at subdl.com, then visit the API Key page</span></span>
+              <span class="tooltip">?
+                <div class="tooltiptext">
+                  Create an account and find your key on the API page.
+                  <a href="https://subdl.com/login" target="_blank">Get API Key →</a>
+                </div>
+              </span>
             </span>
             <label class="switch">
               <input type="checkbox" id="check_subdl" checked>
@@ -322,7 +339,12 @@
         <div class="provider-card">
           <div class="provider-header">
             <span class="provider-name">SubSource
-              <span class="tooltip">?<span class="tooltiptext">Register at subsource.net</span></span>
+              <span class="tooltip">?
+                <div class="tooltiptext">
+                  Register to get access to the SubSource API.
+                  <a href="https://subsource.net/register" target="_blank">Get API Key →</a>
+                </div>
+              </span>
             </span>
             <label class="switch">
               <input type="checkbox" id="check_subsource" checked>
@@ -395,7 +417,7 @@
 
       Object.keys(config).forEach(k => !config[k] && delete config[k]);
 
-      const encoded = btoa(JSON.stringify(config))
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');
