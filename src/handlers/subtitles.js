@@ -74,9 +74,22 @@ module.exports = async (args) => {
   }
 
   return {
-    // Generate a unique ID for Stremio using the sub.id (which is base64) 
-    // plus a small slice of the release name to ensure it's unique in the UI
-    id: `${sub.provider}-${sub.id.slice(0, 16)}-${Buffer.from(sub.releaseName).toString('hex').slice(0, 8)}`,
+    // Use the full sub.id (the base64url-encoded payload) as the Stremio ID.
+    // sub.id already uniquely encodes every piece of routing data — archive ID,
+    // file name, download slug, etc. — so no further hashing or slicing is needed.
+    //
+    // The previous approach of slicing sub.id to 16 chars and appending only the
+    // first 4 bytes of the release name as hex caused two independent collision
+    // paths:
+    //   1. Same-archive variants (e.g. 1080p vs 4K) share an identical JSON
+    //      prefix in their payloads, so their base64url strings are identical
+    //      through at least the first 16 characters.
+    //   2. Any two releases with the same title prefix (e.g. "Movie.2024.")
+    //      produce the same 8-char hex fragment, collapsing into one Stremio
+    //      entry even when the archive IDs differ.
+    // Stremio deduplicates by this id field, so both paths cause separate
+    // subtitle variants to be silently merged into a single selectable entry.
+    id: `${sub.provider}-${sub.id}`,
     url: proxyUrl,
     lang: sub.lang
   };
