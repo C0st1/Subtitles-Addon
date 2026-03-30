@@ -42,7 +42,7 @@ module.exports = async (args) => {
     const promises = enabledSources
       .filter(source => PROVIDERS[source])
       .map(source => {
-        return withTimeout(PROVIDERS[source](fetchParams), 8000)
+        return withTimeout(PROVIDERS[source](fetchParams), 5000)
           .catch(err => {
             logger.error(source, `Provider failed: ${err.message}`, { imdbId: parsedId.imdbId });
             return []; // Fail gracefully
