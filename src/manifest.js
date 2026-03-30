@@ -2,6 +2,7 @@ module.exports = {
   id: "community.subtitle-aggregator",
   version: "1.0.0",
   name: "Subtitle Aggregator",
+  logo: "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/public/logo.png",
   description: "Fetches subtitles from OpenSubtitles, SubDL, SubSource, and Subs.ro",
   resources: ["subtitles"],
   types: ["movie", "series"],
