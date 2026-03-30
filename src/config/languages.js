@@ -15,7 +15,6 @@ const langMap = {
 /**
  * Converts a Stremio ISO 639-2 code to a provider-specific language code.
  * @param {string} iso6392Code - e.g., "eng", "ron"
- * @param {string} providerName - e.g., "subsro", "opensubtitles"
  * @returns {string|null}
  */
 function toProviderCode(iso6392Code, providerName) {
@@ -26,7 +25,6 @@ function toProviderCode(iso6392Code, providerName) {
 /**
  * Converts a provider-specific language code back to a Stremio ISO 639-2 code.
  * @param {string} providerCode - e.g., "ro", "fra"
- * @param {string} providerName - e.g., "subsro"
  * @returns {string|null}
  */
 function fromProviderCode(providerCode, providerName) {
