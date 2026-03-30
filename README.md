@@ -23,4 +23,3 @@ A production-ready, serverless Stremio addon that aggregates subtitles from Open
 - **OpenSubtitles**: Register at opensubtitles.com
 - **SubDL**: Register at subdl.com -> API Key page
 - **SubSource**: Register at subsource.net
-- **Subs.ro**: Free API key available at subs.ro/api
