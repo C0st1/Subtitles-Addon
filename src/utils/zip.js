@@ -1,71 +1,97 @@
-const AdmZip = require('adm-zip');
-const { createExtractorFromData } = require('node-unrar-js');
+const { http } = require('../utils/http');
+const { toProviderCode, fromProviderCode } = require('../config/languages');
+const logger = require('../utils/logger');
+const { listSrtFiles } = require('../utils/zip');
 
 /**
- * Lists all SRT files found within a ZIP or RAR buffer.
- * Returns an array of objects containing the filename and the file data.
- * @param {Buffer} buffer 
- * @returns {Promise<Array<{name: string, data: Buffer}>>}
+ * Subs.ro Provider
+ * Fetches subtitle archives, downloads them in parallel, 
+ * and extracts individual .srt files to display as separate Stremio results.
  */
-async function listSrtFiles(buffer) {
-  const srtFiles = [];
+module.exports = async (params) => {
+  const { imdbIdFull, type, season, episode, languages, config } = params;
+  const apiKey = config.subsro_api_key || process.env.SUBSRO_API_KEY;
+  
+  if (!apiKey) return [];
 
-  // Check for ZIP Magic Number (PK..)
-  if (buffer[0] === 0x50 && buffer[1] === 0x4B) {
-    const zip = new AdmZip(buffer);
-    const entries = zip.getEntries();
-    
-    entries.forEach(entry => {
-      if (!entry.isDirectory && entry.entryName.toLowerCase().endsWith('.srt')) {
-        srtFiles.push({
-          name: entry.entryName,
-          data: entry.getData()
-        });
+  const requestedSubsroLangs = languages.map(l => toProviderCode(l, 'subsro')).filter(Boolean);
+  if (!requestedSubsroLangs.length) return [];
+
+  try {
+    const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbIdFull}`, {
+      headers: { 
+        'X-Subs-Api-Key': apiKey,
+        'User-Agent': 'SubtitleAggregator v1.0.0', 
+        'Accept': 'application/json' 
       }
     });
-    return srtFiles;
-  }
 
-  // Check for RAR Magic Number (Rar!)
-  if (buffer.toString('utf8', 0, 4) === 'Rar!') {
-    const uint8Array = new Uint8Array(buffer);
-    const extractor = await createExtractorFromData({ data: uint8Array });
+    const items = res.data && res.data.items ? res.data.items : [];
     
-    const list = extractor.getFileList();
-    const fileHeaders = Array.from(list.fileHeaders); 
-    
-    const targetHeaders = fileHeaders.filter(h => 
-      !h.flags.directory && h.name.toLowerCase().endsWith('.srt')
-    );
-
-    for (const header of targetHeaders) {
-      const extracted = extractor.extract({ files: [header.name] });
-      const extractedFiles = Array.from(extracted.files);
-      
-      if (extractedFiles.length && extractedFiles[0].extraction) {
-        srtFiles.push({
-          name: header.name,
-          data: Buffer.from(extractedFiles[0].extraction)
-        });
+    // Fetch ZIPs in parallel to avoid hitting Stremio's timeout limit
+    const zipPromises = items.map(async (sub) => {
+      // Filter for TV shows
+      if (type === 'series' && sub.season && sub.episode) {
+        if (parseInt(sub.season) !== parseInt(season) || parseInt(sub.episode) !== parseInt(episode)) {
+          return [];
+        }
       }
-    }
-    return srtFiles;
+
+      const isoLang = fromProviderCode(sub.language, 'subsro');
+      if (!isoLang || !requestedSubsroLangs.includes(sub.language)) return [];
+
+      try {
+        // Download the ZIP archive right now during the search
+        const dlRes = await http.get(`https://api.subs.ro/v1.0/subtitle/${sub.id}/download`, {
+          headers: { 
+            'X-Subs-Api-Key': apiKey,
+            'User-Agent': 'SubtitleAggregator v1.0.0'
+          },
+          responseType: 'arraybuffer'
+        });
+
+        const fileBuffer = Buffer.from(dlRes.data);
+        const srtFiles = await listSrtFiles(fileBuffer);
+        const fileResults = [];
+
+        // Loop through the ZIP and create a Stremio entry for EVERY file
+        for (const file of srtFiles) {
+          const payload = Buffer.from(JSON.stringify({ 
+            id: sub.id, 
+            fileName: file.name // Pass the exact inner file name
+          })).toString('base64url');
+          
+          fileResults.push({
+            id: payload,
+            lang: isoLang,
+            provider: 'subsro',
+            // Clean up the name for Stremio UI (remove .srt extension)
+            releaseName: file.name.replace(/\.srt$/i, '')
+          });
+        }
+        return fileResults;
+
+      } catch (err) {
+        // If downloading the ZIP fails, fallback to pushing the generic archive name
+        logger.warn('subsro', `Could not peek into archive ${sub.id}, falling back to generic name.`, { error: err.message });
+        const fallbackName = sub.title || sub.description || 'Unknown Release';
+        const payload = Buffer.from(JSON.stringify({ id: sub.id, fileName: fallbackName })).toString('base64url');
+        
+        return [{
+          id: payload,
+          lang: isoLang,
+          provider: 'subsro',
+          releaseName: fallbackName
+        }];
+      }
+    });
+
+    // Wait for all ZIPs to be processed and flatten the array
+    const nestedResults = await Promise.all(zipPromises);
+    return nestedResults.flat();
+
+  } catch (error) {
+    logger.error('subsro', `Provider search failed: ${error.message}`, { imdbId: imdbIdFull });
+    return [];
   }
-
-  // If it's not an archive, assume the buffer is a raw SRT file
-  // and return it with a generic name
-  return [{ name: 'original.srt', data: buffer }];
-}
-
-/**
- * Compatibility wrapper to extract the first SRT/SUB file (Legacy support)
- * @param {Buffer} buffer 
- * @returns {Promise<Buffer>}
- */
-async function extractSrt(buffer) {
-  const files = await listSrtFiles(buffer);
-  if (files.length === 0) throw new Error('No SRT found in archive');
-  return files[0].data;
-}
-
-module.exports = { listSrtFiles, extractSrt };
+};
