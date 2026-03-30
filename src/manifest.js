@@ -3,7 +3,7 @@ module.exports = {
   version: "1.0.0",
   name: "Subtitle Aggregator",
   logo: "https://raw.githubusercontent.com/C0st1/Subtitles-Addon/refs/heads/main/public/logo.png",
-  description: "Fetches subtitles from OpenSubtitles, SubDL, SubSource, and Subs.ro",
+  description: "Fetches subtitles from OpenSubtitles, SubDL, SubSource",
   resources: ["subtitles"],
   types: ["movie", "series"],
   idPrefixes: ["tt"],
@@ -24,11 +24,6 @@ module.exports = {
       key: "subsource_api_key",
       type: "text",
       title: "SubSource API Key (required for SubSource)"
-    },
-    {
-      key: "subsro_api_key",
-      type: "text",
-      title: "Subs.ro API Key (required for Subs.ro)"
     },
     {
       key: "languages",
