@@ -22,8 +22,8 @@ module.exports = async (params) => {
 
   // Search for the movie/show slug
   const searchRes = await http.post('https://api.subsource.net/api/searchMovie', { query: title }, { headers });
-  const match = searchRes.data.found.find(m => m.title.toLowerCase() === title.toLowerCase());
-  if (!match) return[];
+  const match = searchRes.data.found?.find(m => m.title.toLowerCase() === title.toLowerCase());
+  if (!match) return [];
 
   const movieSlug = match.folderName;
 
