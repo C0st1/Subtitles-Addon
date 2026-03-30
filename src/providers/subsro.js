@@ -2,6 +2,10 @@ const { http } = require('../utils/http');
 const { toProviderCode, fromProviderCode } = require('../config/languages');
 const logger = require('../utils/logger');
 
+/**
+ * Subs.ro Provider
+ * Fetches subtitle results from api.subs.ro and formats them for Stremio.
+ */
 module.exports = async (params) => {
   // 1. Destructure parameters
   const { imdbIdFull, type, season, episode, languages, config } = params;
@@ -14,7 +18,7 @@ module.exports = async (params) => {
   if (!requestedSubsroLangs.length) return [];
 
   try {
-    // The API documentation specifies searching by imdbid returns a SearchResponse object
+    // Search by IMDB ID as specified in the Subs.ro API documentation
     const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbIdFull}`, {
       headers: { 
         'X-Subs-Api-Key': apiKey,
@@ -25,15 +29,12 @@ module.exports = async (params) => {
 
     const results = [];
     
-    /** * CRITICAL FIX: The Subs.ro API returns a SearchResponse object where 
-     * the subtitles are located in an 'items' array.
-     */
+    // The API returns a SearchResponse object where subtitles are in the 'items' array
     const items = res.data && res.data.items ? res.data.items : [];
 
     for (const sub of items) {
-      // 2. Add filtering for TV shows if applicable
+      // 2. Filter for TV shows if applicable
       if (type === 'series') {
-        // Only filter if the provider provides season/episode metadata in the search results
         if (sub.season && sub.episode) {
           if (parseInt(sub.season) !== parseInt(season) || parseInt(sub.episode) !== parseInt(episode)) {
             continue;
@@ -46,16 +47,14 @@ module.exports = async (params) => {
       // Ensure the language is one of the user's requested languages
       if (!isoLang || !requestedSubsroLangs.includes(sub.language)) continue;
 
-      /**
-       * To show multiple versions in Stremio, we use the 'title' or 'description' 
-       * from the API which usually contains strings like "1080p", "4K", or "HDR".
+      /** * UPDATED: Include fileName in the payload.
+       * This allows the subtitle-proxy to match the correct file inside the ZIP 
+       * when there are multiple versions (1080p, 4K, etc.) available.
        */
       const releaseName = sub.title || sub.description || 'Unknown Release';
-
-      // Payload contains the ID needed for the download proxy
       const payload = Buffer.from(JSON.stringify({ 
-        id: sub.id,
-        isZip: true // Hint to the proxy that this might be an archive
+        id: sub.id, 
+        fileName: releaseName 
       })).toString('base64url');
       
       results.push({
