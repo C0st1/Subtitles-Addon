@@ -7,19 +7,22 @@ const http = axios.create({
 // Simple retry interceptor
 http.interceptors.response.use(null, async (error) => {
   const config = error.config;
-  if (!config || !config.retry) {
+  
+  // Early return if config is missing
+  if (!config) return Promise.reject(error);
+  
+  if (!config.retry) {
     config.retry = 1;
   } else if (config.retry >= 2) {
     return Promise.reject(error);
+  } else {
+    config.retry += 1;
   }
   
-  config.retry += 1;
   if (error.response && error.response.status === 429) {
-    return Promise.reject(error); // Don't retry rate limits immediately
+    return Promise.reject(error); 
   }
   
   await new Promise(resolve => setTimeout(resolve, 1000));
   return http(config);
 });
-
-module.exports = { http };
