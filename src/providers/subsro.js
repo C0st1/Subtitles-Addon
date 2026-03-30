@@ -11,7 +11,7 @@ module.exports = async (params) => {
   if (!requestedSubsroLangs.length) return [];
 
 // Try using imdbIdFull (e.g. tt29567915) if imdbId (29567915) still throws a 404 or 403 after fixing headers
-  const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbId}?language=ro`, {
+  const res = await http.get(`https://api.subs.ro/v1.0/search/imdbid/${imdbIdFull}?language=ro`, {
     headers: { 
       'X-Subs-Api-Key': apiKey,
       'User-Agent': 'SubtitleAggregator v1.0.0', 
