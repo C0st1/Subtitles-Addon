@@ -75,7 +75,6 @@
       display: block;
     }
 
-    /* Provider Grid */
     .provider-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -102,7 +101,6 @@
 
     .provider-name { font-size: 14px; font-weight: 600; }
 
-    /* Language Selection */
     .lang-container {
       display: flex;
       flex-wrap: wrap;
@@ -136,7 +134,6 @@
       font-size: 13px;
     }
 
-    /* Switch Toggle */
     .switch {
       position: relative;
       display: inline-block;
@@ -316,49 +313,44 @@
   </div>
 
   <script>
-    // Toggle language chips
     document.querySelectorAll('.lang-chip').forEach(chip => {
       chip.onclick = () => chip.classList.toggle('active');
     });
 
     function generate() {
-  const providers = ['opensubtitles', 'subdl', 'subsource', 'subsro'];
-  const enabledSources = providers.filter(p => document.getElementById(`check_${p}`).checked);
-  const langs = Array.from(document.querySelectorAll('.lang-chip.active')).map(c => c.dataset.code);
+      const providers = ['opensubtitles', 'subdl', 'subsource', 'subsro'];
+      const enabledSources = providers.filter(p => document.getElementById(`check_${p}`).checked);
+      const langs = Array.from(document.querySelectorAll('.lang-chip.active')).map(c => c.dataset.code);
 
-  const config = {
-    opensubtitles_api_key: document.getElementById('key_opensubtitles').value.trim(),
-    subdl_api_key: document.getElementById('key_subdl').value.trim(),
-    subsource_api_key: document.getElementById('key_subsource').value.trim(),
-    subsro_api_key: document.getElementById('key_subsro').value.trim(),
-    languages: langs.join(','),
-    enabled_sources: enabledSources.join(','),
-    force_encoding_detection: document.getElementById('force_encoding').checked
-  };
+      const config = {
+        opensubtitles_api_key: document.getElementById('key_opensubtitles').value.trim(),
+        subdl_api_key: document.getElementById('key_subdl').value.trim(),
+        subsource_api_key: document.getElementById('key_subsource').value.trim(),
+        subsro_api_key: document.getElementById('key_subsro').value.trim(),
+        languages: langs.join(','),
+        enabled_sources: enabledSources.join(','),
+        force_encoding_detection: document.getElementById('force_encoding').checked
+      };
 
-  // Clean empty keys
-  Object.keys(config).forEach(k => !config[k] && delete config[k]);
-
-  const encoded = btoa(JSON.stringify(config)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  
-  // Create the base URL with the encoded config
-  const baseUrl = `${window.location.host}/${encoded}`;
-  const manifestUrl = `${window.location.protocol}//${baseUrl}/manifest.json`;
-  const installUrl = `stremio://${baseUrl}`; // Standard Stremio install format
-  
-  document.getElementById('stremioLink').href = installUrl;
-  document.getElementById('manualUrl').innerText = manifestUrl;
-  document.getElementById('result').style.display = 'block';
-}
-
-      // Clean empty keys
       Object.keys(config).forEach(k => !config[k] && delete config[k]);
 
-      const encoded = btoa(JSON.stringify(config)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      const url = `${window.location.protocol}//${window.location.host}/${encoded}/manifest.json`;
+      const encoded = btoa(JSON.stringify(config))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
       
-      document.getElementById('stremioLink').href = url.replace(/^http/, 'stremio');
-      document.getElementById('manualUrl').innerText = url;
+      const host = window.location.host;
+      const protocol = window.location.protocol;
+      
+      // The manual URL needs manifest.json
+      const manifestUrl = `${protocol}//${host}/${encoded}/manifest.json`;
+      
+      // FIX: The stremio:// protocol should point to the base config path without manifest.json 
+      // for better compatibility with different Stremio versions/platforms.
+      const installUrl = `stremio://${host}/${encoded}`;
+      
+      document.getElementById('stremioLink').href = installUrl;
+      document.getElementById('manualUrl').innerText = manifestUrl;
       document.getElementById('result').style.display = 'block';
     }
   </script>
