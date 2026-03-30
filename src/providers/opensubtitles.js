@@ -21,7 +21,7 @@ module.exports = async (params) => {
   }
 
   const res = await http.get(`https://api.opensubtitles.com/api/v1/subtitles?${query.toString()}`, {
-    headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleAggregator v1.0.0' }
+    headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleHub v1.0.0' }
   });
 
   const results = [];
