@@ -2,7 +2,7 @@
 
 const langMap = {
   'eng': { opensubtitles: 'en', subdl: 'EN', subsource: 'english' },
-  'ron': { opensubtitles: 'ro', subdl: 'RO', subsource: 'romanian' ,
+  'ron': { opensubtitles: 'ro', subdl: 'RO', subsource: 'romanian' },
   'fre': { opensubtitles: 'fr', subdl: 'FR', subsource: 'french' },
   'spa': { opensubtitles: 'es', subdl: 'ES', subsource: 'spanish' },
   'ger': { opensubtitles: 'de', subdl: 'DE', subsource: 'german' },
