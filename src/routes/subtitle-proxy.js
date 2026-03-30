@@ -98,13 +98,22 @@ module.exports = async (req, res) => {
           const { listSrtFiles } = require('../utils/zip');
           const allFiles = await listSrtFiles(fileBuffer);
           
-          // Improved matching: Normalize names to handle dots/dashes
-          const matchedFile = allFiles.find(f => {
-            const cleanFileName = f.name.toLowerCase().replace('.srt', '').replace(/[._-]/g, ' ');
-            const cleanSearchName = payload.fileName.toLowerCase().replace(/[._-]/g, ' ');
-            
-            return cleanFileName.includes(cleanSearchName) || cleanSearchName.includes(cleanFileName);
-          }) || allFiles[0];
+          // 1. Try an EXACT match first (since our payload now has the exact name)
+          let matchedFile = allFiles.find(f => f.name === payload.fileName);
+
+          // 2. Fallback to fuzzy matching if exact match fails (for older cached links)
+          if (!matchedFile) {
+            matchedFile = allFiles.find(f => {
+              const cleanFileName = f.name.toLowerCase().replace('.srt', '').replace(/[._-]/g, ' ');
+              const cleanSearchName = payload.fileName.toLowerCase().replace(/[._-]/g, ' ');
+              return cleanFileName.includes(cleanSearchName) || cleanSearchName.includes(cleanFileName);
+            });
+          }
+          
+          // 3. Ultimate fallback: just grab the first file
+          if (!matchedFile) {
+            matchedFile = allFiles[0];
+          }
 
           vttContent = srtToVtt(matchedFile.data);
         } catch (e) {
