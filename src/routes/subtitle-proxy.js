@@ -84,7 +84,12 @@ module.exports = async (req, res) => {
         if (!apiKey) throw new Error("Missing Subs.ro API Key");
         
         const fileRes = await http.get(`https://api.subs.ro/v1.0/subtitle/${payload.id}/download`, {
-          headers: { 'X-Subs-Api-Key': apiKey },
+          headers: { 
+            'X-Subs-Api-Key': apiKey,
+            // CRITICAL: Override the fake Chrome headers
+            'User-Agent': 'SubtitleAggregator v1.0.0',
+            'Accept': '*/*'
+          },
           responseType: 'arraybuffer'
         });
         
