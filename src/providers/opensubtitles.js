@@ -25,8 +25,11 @@ module.exports = async (params) => {
   });
 
   const results = [];
-  for (const item of res.data.data || []) {
-    for (const file of item.attributes.files || []) {
+  
+  // SAFE: Use optional chaining for the data array
+  for (const item of res?.data?.data || []) {
+    // SAFE: Use optional chaining for the nested attributes/files
+    for (const file of item?.attributes?.files || []) {
       const payload = Buffer.from(JSON.stringify({ id: file.file_id })).toString('base64url');
       
       // Ensure we convert OpenSubtitles 2-letter 'en' back to Stremio's expected 3-letter 'eng'
