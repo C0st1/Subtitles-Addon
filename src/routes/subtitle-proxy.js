@@ -38,17 +38,21 @@ module.exports = async (req, res) => {
           { file_id: payload.id },
           { headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleAggregator v1.0.0' } }
         );
-        const fileRes = await axios.get(dlRes.data.link, { responseType: 'arraybuffer' });
         
-        // FIX: Convert ArrayBuffer to Node Buffer
+        if (!dlRes.data.link) throw new Error("OpenSubtitles API denied the download link (Rate limit or Authentication).");
+        
+        const fileRes = await axios.get(dlRes.data.link, { responseType: 'arraybuffer' });
         const fileBuffer = Buffer.from(fileRes.data);
         vttContent = srtToVtt(fileBuffer);
         break;
       }
       case 'subdl': {
-        const fileRes = await axios.get(`https://dl.subdl.com/subtitle/${payload.url}`, { responseType: 'arraybuffer' });
-        
-        // FIX: Convert ArrayBuffer to Node Buffer
+        // CRITICAL FIX: Ensure valid SubDL URL construction
+        const dlUrl = payload.url.startsWith('http') 
+            ? payload.url 
+            : `https://dl.subdl.com${payload.url.startsWith('/') ? '' : '/'}${payload.url}`;
+            
+        const fileRes = await axios.get(dlUrl, { responseType: 'arraybuffer' });
         const fileBuffer = Buffer.from(fileRes.data);
         try {
           const srtBuffer = extractSrt(fileBuffer);
@@ -66,9 +70,9 @@ module.exports = async (req, res) => {
           id: payload.id
         }, { headers: { ...(apiKey && { 'apiKey': apiKey }) } });
         
-        const fileRes = await axios.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
+        if (!dlRes.data.subUrl) throw new Error("SubSource did not return a valid download URL.");
         
-        // FIX: Convert ArrayBuffer to Node Buffer
+        const fileRes = await axios.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
         const fileBuffer = Buffer.from(fileRes.data);
         try {
           const srtBuffer = extractSrt(fileBuffer);
@@ -87,7 +91,6 @@ module.exports = async (req, res) => {
           responseType: 'arraybuffer'
         });
         
-        // FIX: Convert ArrayBuffer to Node Buffer
         const fileBuffer = Buffer.from(fileRes.data);
         try {
           const srtBuffer = extractSrt(fileBuffer);
@@ -109,6 +112,7 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     logger.error('proxy', `Failed to serve subtitle: ${error.message}`, { provider });
+    // Keep 404 so Stremio properly skips/fails if network requests to providers crash
     res.status(404).send('Subtitle not found or failed to process.');
   }
 };
