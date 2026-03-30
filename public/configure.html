@@ -4,242 +4,218 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configure Subtitle Aggregator</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --primary: #8b5cf6;
       --primary-hover: #7c3aed;
-      --bg-dark: #09090b;
-      --card-bg: rgba(24, 24, 27, 0.7);
+      --bg-dark: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
       --border: rgba(255, 255, 255, 0.1);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --input-bg: rgba(0, 0, 0, 0.4);
+      --input-bg: rgba(0, 0, 0, 0.3);
     }
 
     * { box-sizing: border-box; }
-
     body {
-      font-family: 'Poppins', sans-serif;
+      font-family: 'Inter', sans-serif;
       margin: 0;
       min-height: 100vh;
       background-color: var(--bg-dark);
-      /* Cinematic gradient background */
       background-image: 
-        radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.15), transparent 25%),
-        radial-gradient(circle at 85% 30%, rgba(124, 58, 237, 0.15), transparent 25%);
+        radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.15), transparent 35%),
+        radial-gradient(circle at 100% 100%, rgba(124, 58, 237, 0.1), transparent 35%);
       color: var(--text-main);
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 40px 20px;
+      padding: 20px;
     }
 
     .dashboard {
       background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border);
       border-radius: 24px;
       width: 100%;
-      max-width: 850px;
+      max-width: 650px;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
       overflow: hidden;
-      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(40px); }
-      to { opacity: 1; transform: translateY(0); }
     }
 
     .header {
-      padding: 40px 40px 20px;
+      padding: 32px;
       text-align: center;
       border-bottom: 1px solid var(--border);
     }
 
     .header-icon {
-      width: 64px;
-      height: 64px;
+      width: 56px;
+      height: 56px;
       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      border-radius: 16px;
+      border-radius: 14px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 16px;
-      box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
     }
 
-    .header-icon svg {
-      width: 32px;
-      height: 32px;
-      color: white;
+    h1 { margin: 0; font-size: 24px; font-weight: 700; }
+    .subtitle { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+
+    .content { padding: 32px; }
+    .section-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: block;
     }
 
-    h1 { margin: 0 0 8px; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-    p.subtitle { margin: 0; color: var(--text-muted); font-size: 15px; }
-
-    .form-grid {
+    /* Provider Grid */
+    .provider-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      padding: 40px;
+      gap: 16px;
+      margin-bottom: 32px;
     }
 
-    @media (max-width: 768px) {
-      .form-grid { grid-template-columns: 1fr; gap: 30px; padding: 25px; }
-    }
-
-    .section-title {
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--primary);
-      font-weight: 600;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .input-group { margin-bottom: 20px; }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-main);
-    }
-
-    .input-wrapper {
-      position: relative;
-    }
-
-    input[type="text"], input[type="password"] {
-      width: 100%;
+    .provider-card {
       background: var(--input-bg);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      color: white;
-      padding: 14px 16px;
-      border-radius: 12px;
-      font-family: inherit;
-      font-size: 15px;
-      transition: all 0.3s ease;
-    }
-
-    input:focus {
-      outline: none;
-      border-color: var(--primary);
-      background: rgba(0, 0, 0, 0.6);
-      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
-    }
-
-    input::placeholder { color: rgba(255, 255, 255, 0.3); }
-
-    .checkbox-wrapper {
-      background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border);
+      border-radius: 16px;
       padding: 16px;
-      border-radius: 12px;
+      transition: all 0.2s;
+    }
+
+    .provider-card:focus-within { border-color: var(--primary); }
+
+    .provider-header {
       display: flex;
-      align-items: flex-start;
-      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .provider-name { font-size: 14px; font-weight: 600; }
+
+    /* Language Selection */
+    .lang-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+
+    .lang-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      font-size: 13px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
     }
 
-    .checkbox-wrapper:hover { background: rgba(255, 255, 255, 0.05); }
-
-    .checkbox-wrapper input[type="checkbox"] {
-      margin-top: 3px;
-      width: 18px;
-      height: 18px;
-      accent-color: var(--primary);
+    .lang-chip.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
     }
 
-    .checkbox-text { display: flex; flex-direction: column; gap: 4px; }
-    .checkbox-text span.title { font-size: 14px; font-weight: 500; }
-    .checkbox-text span.desc { font-size: 12px; color: var(--text-muted); }
+    input[type="password"], input[type="text"] {
+      width: 100%;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--border);
+      color: white;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    /* Switch Toggle */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 20px;
+    }
+
+    .switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334155;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px; width: 14px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(14px); }
 
     .footer {
-      padding: 30px 40px;
+      padding: 24px 32px;
       background: rgba(0, 0, 0, 0.2);
       border-top: 1px solid var(--border);
     }
 
     button {
       width: 100%;
-      padding: 16px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      padding: 14px;
+      background: var(--primary);
       color: white;
       border: none;
       border-radius: 12px;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
-      font-family: inherit;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      box-shadow: 0 10px 20px rgba(139, 92, 246, 0.25);
     }
-
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 15px 25px rgba(139, 92, 246, 0.35);
-    }
-
-    button:active { transform: translateY(0); }
 
     .result-panel {
       display: none;
-      margin-top: 25px;
-      background: rgba(0, 0, 0, 0.3);
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(139, 92, 246, 0.1);
       border: 1px solid var(--primary);
       border-radius: 12px;
-      padding: 25px;
-      animation: fadeIn 0.4s ease;
     }
-
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     .install-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      background: #ffffff;
-      color: #000000;
+      display: block;
+      text-align: center;
+      background: white;
+      color: black;
+      padding: 12px;
+      border-radius: 8px;
       text-decoration: none;
-      padding: 14px;
-      border-radius: 10px;
-      font-weight: 600;
-      font-size: 15px;
-      margin-bottom: 20px;
-      transition: background 0.2s;
+      font-weight: 700;
+      margin-bottom: 12px;
     }
-
-    .install-btn:hover { background: #e2e8f0; }
 
     .code-block {
-      background: #000;
-      color: #a78bfa;
-      padding: 12px 16px;
-      border-radius: 8px;
       font-family: monospace;
-      font-size: 12px;
+      font-size: 11px;
+      background: black;
+      padding: 10px;
+      border-radius: 6px;
       word-break: break-all;
-      border: 1px solid rgba(255,255,255,0.1);
+      color: #a78bfa;
     }
-
-    .label-hint { font-size: 12px; color: var(--text-muted); margin-left: 8px; font-weight: 400; }
   </style>
 </head>
 <body>
@@ -247,105 +223,128 @@
   <div class="dashboard">
     <div class="header">
       <div class="header-icon">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <svg style="width:28px;height:28px;color:white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
         </svg>
       </div>
-      <h1>Subtitle Aggregator</h1>
-      <p class="subtitle">Ultimate Subtitle Hub for Stremio</p>
+      <h1>Subtitle Hub</h1>
+      <p class="subtitle">Select your providers and preferred languages</p>
     </div>
 
-    <form id="configForm">
-      <div class="form-grid">
-        <div class="column">
-          <div class="section-title">Provider Keys</div>
-          
-          <div class="input-group">
-            <label>OpenSubtitles <span class="label-hint">(Optional)</span></label>
-            <input type="password" id="opensubtitles_api_key" placeholder="Enter API Key">
+    <div class="content">
+      <span class="section-label">Providers & API Keys</span>
+      <div class="provider-grid">
+        <div class="provider-card">
+          <div class="provider-header">
+            <span class="provider-name">OpenSubtitles</span>
+            <label class="switch">
+              <input type="checkbox" id="check_opensubtitles" checked>
+              <span class="slider"></span>
+            </label>
           </div>
-
-          <div class="input-group">
-            <label>SubDL <span class="label-hint">(Required)</span></label>
-            <input type="password" id="subdl_api_key" placeholder="Enter API Key">
-          </div>
-
-          <div class="input-group">
-            <label>SubSource <span class="label-hint">(Required)</span></label>
-            <input type="password" id="subsource_api_key" placeholder="Enter API Key">
-          </div>
-
-          <div class="input-group">
-            <label>Subs.ro <span class="label-hint">(Required)</span></label>
-            <input type="password" id="subsro_api_key" placeholder="Enter API Key">
-          </div>
+          <input type="password" id="key_opensubtitles" placeholder="API Key (Optional)">
         </div>
 
-        <div class="column">
-          <div class="section-title">Preferences</div>
-
-          <div class="input-group">
-            <label>Languages <span class="label-hint">(ISO 639-2)</span></label>
-            <input type="text" id="languages" value="eng,ron" placeholder="e.g. eng,ron,fre">
+        <div class="provider-card">
+          <div class="provider-header">
+            <span class="provider-name">SubDL</span>
+            <label class="switch">
+              <input type="checkbox" id="check_subdl" checked>
+              <span class="slider"></span>
+            </label>
           </div>
-
-          <div class="input-group">
-            <label>Enabled Sources</label>
-            <input type="text" id="enabled_sources" value="opensubtitles,subdl,subsource,subsro">
-          </div>
-
-          <label class="checkbox-wrapper">
-            <input type="checkbox" id="force_encoding_detection">
-            <div class="checkbox-text">
-              <span class="title">Force Encoding Detection</span>
-              <span class="desc">Uses Stremio's local server to bypass severe diacritic rendering issues (Eastern European languages).</span>
-            </div>
-          </label>
+          <input type="password" id="key_subdl" placeholder="API Key">
         </div>
-      </div>
 
-      <div class="footer">
-        <button type="button" onclick="generateLink()">Generate Addon Link</button>
-        
-        <div class="result-panel" id="linksContainer">
-          <a id="stremioLink" href="#" class="install-btn">
-            <svg style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            Install Addon in Stremio
-          </a>
-          <label style="color: var(--text-muted); font-size: 12px; margin-bottom: 6px;">Manual Manifest URL (Copy & Paste)</label>
-          <div id="manualUrl" class="code-block"></div>
+        <div class="provider-card">
+          <div class="provider-header">
+            <span class="provider-name">SubSource</span>
+            <label class="switch">
+              <input type="checkbox" id="check_subsource" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <input type="password" id="key_subsource" placeholder="API Key">
+        </div>
+
+        <div class="provider-card">
+          <div class="provider-header">
+            <span class="provider-name">Subs.ro</span>
+            <label class="switch">
+              <input type="checkbox" id="check_subsro" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <input type="password" id="key_subsro" placeholder="API Key">
         </div>
       </div>
-    </form>
+
+      <span class="section-label">Preferred Languages</span>
+      <div class="lang-container" id="langPicker">
+        <div class="lang-chip active" data-code="eng">English</div>
+        <div class="lang-chip active" data-code="ron">Romanian</div>
+        <div class="lang-chip" data-code="fre">French</div>
+        <div class="lang-chip" data-code="spa">Spanish</div>
+        <div class="lang-chip" data-code="ger">German</div>
+        <div class="lang-chip" data-code="ita">Italian</div>
+        <div class="lang-chip" data-code="hun">Hungarian</div>
+        <div class="lang-chip" data-code="por">Portuguese</div>
+        <div class="lang-chip" data-code="gre">Greek</div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.03); padding:12px; border-radius:12px; border: 1px solid var(--border)">
+        <label class="switch">
+          <input type="checkbox" id="force_encoding">
+          <span class="slider"></span>
+        </label>
+        <div>
+          <div style="font-size:13px; font-weight:600">Strict Encoding Detection</div>
+          <div style="font-size:11px; color:var(--text-muted)">Fixes broken characters in Romanian/Eastern European subs.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button onclick="generate()">Generate Link</button>
+
+      <div class="result-panel" id="result">
+        <a id="stremioLink" href="#" class="install-btn">Install in Stremio</a>
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px">Or copy URL:</div>
+        <div id="manualUrl" class="code-block"></div>
+      </div>
+    </div>
   </div>
 
   <script>
-    function generateLink() {
+    // Toggle language chips
+    document.querySelectorAll('.lang-chip').forEach(chip => {
+      chip.onclick = () => chip.classList.toggle('active');
+    });
+
+    function generate() {
+      const providers = ['opensubtitles', 'subdl', 'subsource', 'subsro'];
+      const enabledSources = providers.filter(p => document.getElementById(`check_${p}`).checked);
+      const langs = Array.from(document.querySelectorAll('.lang-chip.active')).map(c => c.dataset.code);
+
       const config = {
-        opensubtitles_api_key: document.getElementById('opensubtitles_api_key').value.trim(),
-        subdl_api_key: document.getElementById('subdl_api_key').value.trim(),
-        subsource_api_key: document.getElementById('subsource_api_key').value.trim(),
-        subsro_api_key: document.getElementById('subsro_api_key').value.trim(),
-        languages: document.getElementById('languages').value.trim(),
-        enabled_sources: document.getElementById('enabled_sources').value.trim(),
-        force_encoding_detection: document.getElementById('force_encoding_detection').checked
+        opensubtitles_api_key: document.getElementById('key_opensubtitles').value.trim(),
+        subdl_api_key: document.getElementById('key_subdl').value.trim(),
+        subsource_api_key: document.getElementById('key_subsource').value.trim(),
+        subsro_api_key: document.getElementById('key_subsro').value.trim(),
+        languages: langs.join(','),
+        enabled_sources: enabledSources.join(','),
+        force_encoding_detection: document.getElementById('force_encoding').checked
       };
 
-      // Remove empty keys
+      // Clean empty keys
       Object.keys(config).forEach(k => !config[k] && delete config[k]);
 
-      const configStr = JSON.stringify(config);
-      const encodedConfig = btoa(configStr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const encoded = btoa(JSON.stringify(config)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const url = `${window.location.protocol}//${window.location.host}/${encoded}/manifest.json`;
       
-      const host = window.location.host;
-      const protocol = window.location.protocol;
-      
-      const manifestUrl = `${protocol}//${host}/${encodedConfig}/manifest.json`;
-      const stremioUrl = `stremio://${host}/${encodedConfig}/manifest.json`;
-
-      document.getElementById('stremioLink').href = stremioUrl;
-      document.getElementById('manualUrl').innerText = manifestUrl;
-      document.getElementById('linksContainer').style.display = 'block';
+      document.getElementById('stremioLink').href = url.replace(/^http/, 'stremio');
+      document.getElementById('manualUrl').innerText = url;
+      document.getElementById('result').style.display = 'block';
     }
   </script>
 </body>
