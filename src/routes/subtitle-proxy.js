@@ -56,6 +56,9 @@ module.exports = async (req, res) => {
         try {
           vttContent = srtToVtt(extractSrt(fileBuffer));
         } catch (e) {
+          if (fileBuffer.toString('utf8', 0, 4) === 'Rar!') {
+            throw new Error('RAR archives are not currently supported');
+          }
           vttContent = srtToVtt(fileBuffer); 
         }
         break;
@@ -75,6 +78,9 @@ module.exports = async (req, res) => {
         try {
           vttContent = srtToVtt(extractSrt(fileBuffer));
         } catch (e) {
+          if (fileBuffer.toString('utf8', 0, 4) === 'Rar!') {
+            throw new Error('RAR archives are not currently supported');
+          }
           vttContent = srtToVtt(fileBuffer); 
         }
         break;
@@ -97,6 +103,9 @@ module.exports = async (req, res) => {
         try {
           vttContent = srtToVtt(extractSrt(fileBuffer));
         } catch (e) {
+          if (fileBuffer.toString('utf8', 0, 4) === 'Rar!') {
+            throw new Error('RAR archives are not currently supported');
+          }
           vttContent = srtToVtt(fileBuffer); 
         }
         break;
