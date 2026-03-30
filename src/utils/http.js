@@ -26,3 +26,6 @@ http.interceptors.response.use(null, async (error) => {
   await new Promise(resolve => setTimeout(resolve, 1000));
   return http(config);
 });
+
+// THIS WAS MISSING
+module.exports = { http };
