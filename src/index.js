@@ -15,66 +15,352 @@ const configureHtml = `<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configure Subtitle Aggregator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #1e1e1e; color: #fff; }
-    label { display: block; margin-top: 15px; font-weight: bold; }
-    input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #444; background: #333; color: #fff; }
-    button { margin-top: 25px; padding: 12px 20px; background: #8a5a96; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; }
-    button:hover { background: #6b4675; }
-    .links { margin-top: 20px; padding: 15px; background: #2a2a2a; border-radius: 5px; display: none; word-break: break-all; }
-    a { color: #b388ff; }
+    :root {
+      --primary: #8b5cf6;
+      --primary-hover: #7c3aed;
+      --bg-dark: #09090b;
+      --card-bg: rgba(24, 24, 27, 0.7);
+      --border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --input-bg: rgba(0, 0, 0, 0.4);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--bg-dark);
+      /* Cinematic gradient background */
+      background-image: 
+        radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.15), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(124, 58, 237, 0.15), transparent 25%);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .dashboard {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 850px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header {
+      padding: 40px 40px 20px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
+    }
+
+    .header-icon svg {
+      width: 32px;
+      height: 32px;
+      color: white;
+    }
+
+    h1 { margin: 0 0 8px; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+    p.subtitle { margin: 0; color: var(--text-muted); font-size: 15px; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      padding: 40px;
+    }
+
+    @media (max-width: 768px) {
+      .form-grid { grid-template-columns: 1fr; gap: 30px; padding: 25px; }
+    }
+
+    .section-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .input-group { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-main);
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: white;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 15px;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: rgba(0, 0, 0, 0.6);
+      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+    }
+
+    input::placeholder { color: rgba(255, 255, 255, 0.3); }
+
+    .checkbox-wrapper {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .checkbox-wrapper:hover { background: rgba(255, 255, 255, 0.05); }
+
+    .checkbox-wrapper input[type="checkbox"] {
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary);
+    }
+
+    .checkbox-text { display: flex; flex-direction: column; gap: 4px; }
+    .checkbox-text span.title { font-size: 14px; font-weight: 500; }
+    .checkbox-text span.desc { font-size: 12px; color: var(--text-muted); }
+
+    .footer {
+      padding: 30px 40px;
+      background: rgba(0, 0, 0, 0.2);
+      border-top: 1px solid var(--border);
+    }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 10px 20px rgba(139, 92, 246, 0.25);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 25px rgba(139, 92, 246, 0.35);
+    }
+
+    button:active { transform: translateY(0); }
+
+    .result-panel {
+      display: none;
+      margin-top: 25px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 25px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .install-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #ffffff;
+      color: #000000;
+      text-decoration: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 20px;
+      transition: background 0.2s;
+    }
+
+    .install-btn:hover { background: #e2e8f0; }
+
+    .code-block {
+      background: #000;
+      color: #a78bfa;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      word-break: break-all;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .label-hint { font-size: 12px; color: var(--text-muted); margin-left: 8px; font-weight: 400; }
   </style>
 </head>
 <body>
-  <h2>Subtitle Aggregator Configuration</h2>
-  <form id="configForm">
-    <label>OpenSubtitles API Key (Optional)</label>
-    <input type="password" id="opensubtitles_api_key">
-    <label>SubDL API Key</label>
-    <input type="password" id="subdl_api_key">
-    <label>SubSource API Key</label>
-    <input type="password" id="subsource_api_key">
-    <label>Subs.ro API Key</label>
-    <input type="password" id="subsro_api_key">
-    <label>Languages (ISO 639-2, comma-separated)</label>
-    <input type="text" id="languages" value="eng,ron">
-    <label>Enabled Sources (comma-separated)</label>
-    <input type="text" id="enabled_sources" value="opensubtitles,subdl,subsource,subsro">
-    <label>
-      <input type="checkbox" id="force_encoding_detection">
-      Force Stremio local encoding detection (fallback for severe diacritic issues)
-    </label>
-    <button type="button" onclick="generateLink()">Generate Install Link</button>
-  </form>
-  <div class="links" id="linksContainer">
-    <p><strong>Stremio Install Link:</strong><br><a id="stremioLink" href="#">Install</a></p>
-    <p><strong>Manual URL:</strong><br><span id="manualUrl"></span></p>
+
+  <div class="dashboard">
+    <div class="header">
+      <div class="header-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+        </svg>
+      </div>
+      <h1>Subtitle Aggregator</h1>
+      <p class="subtitle">Ultimate Subtitle Hub for Stremio</p>
+    </div>
+
+    <form id="configForm">
+      <div class="form-grid">
+        <div class="column">
+          <div class="section-title">Provider Keys</div>
+          
+          <div class="input-group">
+            <label>OpenSubtitles <span class="label-hint">(Optional)</span></label>
+            <input type="password" id="opensubtitles_api_key" placeholder="Enter API Key">
+          </div>
+
+          <div class="input-group">
+            <label>SubDL <span class="label-hint">(Required)</span></label>
+            <input type="password" id="subdl_api_key" placeholder="Enter API Key">
+          </div>
+
+          <div class="input-group">
+            <label>SubSource <span class="label-hint">(Required)</span></label>
+            <input type="password" id="subsource_api_key" placeholder="Enter API Key">
+          </div>
+
+          <div class="input-group">
+            <label>Subs.ro <span class="label-hint">(Required)</span></label>
+            <input type="password" id="subsro_api_key" placeholder="Enter API Key">
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="section-title">Preferences</div>
+
+          <div class="input-group">
+            <label>Languages <span class="label-hint">(ISO 639-2)</span></label>
+            <input type="text" id="languages" value="eng,ron" placeholder="e.g. eng,ron,fre">
+          </div>
+
+          <div class="input-group">
+            <label>Enabled Sources</label>
+            <input type="text" id="enabled_sources" value="opensubtitles,subdl,subsource,subsro">
+          </div>
+
+          <label class="checkbox-wrapper">
+            <input type="checkbox" id="force_encoding_detection">
+            <div class="checkbox-text">
+              <span class="title">Force Encoding Detection</span>
+              <span class="desc">Uses Stremio's local server to bypass severe diacritic rendering issues (Eastern European languages).</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="footer">
+        <button type="button" onclick="generateLink()">Generate Addon Link</button>
+        
+        <div class="result-panel" id="linksContainer">
+          <a id="stremioLink" href="#" class="install-btn">
+            <svg style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Install Addon in Stremio
+          </a>
+          <label style="color: var(--text-muted); font-size: 12px; margin-bottom: 6px;">Manual Manifest URL (Copy & Paste)</label>
+          <div id="manualUrl" class="code-block"></div>
+        </div>
+      </div>
+    </form>
   </div>
+
   <script>
     function generateLink() {
       const config = {
-        opensubtitles_api_key: document.getElementById('opensubtitles_api_key').value,
-        subdl_api_key: document.getElementById('subdl_api_key').value,
-        subsource_api_key: document.getElementById('subsource_api_key').value,
-        subsro_api_key: document.getElementById('subsro_api_key').value,
-        languages: document.getElementById('languages').value,
-        enabled_sources: document.getElementById('enabled_sources').value,
+        opensubtitles_api_key: document.getElementById('opensubtitles_api_key').value.trim(),
+        subdl_api_key: document.getElementById('subdl_api_key').value.trim(),
+        subsource_api_key: document.getElementById('subsource_api_key').value.trim(),
+        subsro_api_key: document.getElementById('subsro_api_key').value.trim(),
+        languages: document.getElementById('languages').value.trim(),
+        enabled_sources: document.getElementById('enabled_sources').value.trim(),
         force_encoding_detection: document.getElementById('force_encoding_detection').checked
       };
+
+      // Remove empty keys
       Object.keys(config).forEach(k => !config[k] && delete config[k]);
+
       const configStr = JSON.stringify(config);
-      const encodedConfig = btoa(configStr).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
+      const encodedConfig = btoa(configStr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      
       const host = window.location.host;
       const protocol = window.location.protocol;
-      const manifestUrl = \`\${protocol}//\${host}/\${encodedConfig}/manifest.json\`;
-      const stremioUrl = \`stremio://\${host}/\${encodedConfig}/manifest.json\`;
+      
+      const manifestUrl = `${protocol}//${host}/${encodedConfig}/manifest.json`;
+      const stremioUrl = `stremio://${host}/${encodedConfig}/manifest.json`;
+
       document.getElementById('stremioLink').href = stremioUrl;
       document.getElementById('manualUrl').innerText = manifestUrl;
       document.getElementById('linksContainer').style.display = 'block';
     }
   </script>
 </body>
-</html>`;
+</html>';
 
 app.get('/', (req, res) => res.send(configureHtml));
 app.get('/configure', (req, res) => res.send(configureHtml));
