@@ -61,20 +61,20 @@ module.exports = async (args) => {
     const configBase64 = Buffer.from(JSON.stringify(config)).toString('base64url');
     
     const formattedSubtitles = subtitles.map(sub => {
-      // FIX: Use the injected host from index.js middleware instead of process.env
       const host = config.addon_host || 'localhost:7000';
       const protocol = host.includes('localhost') ? 'http' : 'https';
       const baseUrl = `${protocol}://${host}`;
       
       let proxyUrl = `${baseUrl}/subtitle/${sub.provider}/${sub.id}.vtt?config=${configBase64}`;
 
-      // Fallback to Stremio's local server for encoding detection if requested
       if (config.force_encoding_detection) {
         proxyUrl = `http://127.0.0.1:11470/subtitles.vtt?from=${encodeURIComponent(proxyUrl)}`;
       }
 
       return {
-        id: `${sub.provider}-${sub.id}-${sub.lang}-${Buffer.from(sub.releaseName).toString('hex')}`,
+        // FIX: We add a hash of the release name to the ID to ensure 
+        // Stremio doesn't merge the 1080p and 4K versions into one entry.
+        id: `${sub.provider}-${sub.id}-${sub.lang}-${Buffer.from(sub.releaseName).toString('hex').slice(0, 8)}`,
         url: proxyUrl,
         lang: sub.lang
       };
