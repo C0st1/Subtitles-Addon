@@ -92,10 +92,13 @@ app.use((req, res, next) => {
       while (b64.length % 4) b64 += '=';
       const decoded = Buffer.from(b64, 'base64').toString('utf8');
       
-      JSON.parse(decoded); // Validate it is valid JSON
+      const configObj = JSON.parse(decoded); // Validate it is valid JSON
+      
+      // FIX: Dynamically inject the correct Vercel host into the config
+      configObj.addon_host = req.headers.host;
       
       // Rewrite the URL into standard URL-encoded JSON for the SDK router
-      req.url = `/${encodeURIComponent(decoded)}/${match[2]}`;
+      req.url = `/${encodeURIComponent(JSON.stringify(configObj))}/${match[2]}`;
     } catch (e) {
       // Not a valid base64 config, just proceed
     }
