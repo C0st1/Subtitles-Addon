@@ -44,8 +44,12 @@ module.exports = async (req, res) => {
       }
       case 'subdl': {
         const fileRes = await axios.get(`https://dl.subdl.com/subtitle/${payload.url}`, { responseType: 'arraybuffer' });
-        const srtBuffer = extractSrt(fileRes.data);
-        vttContent = srtToVtt(srtBuffer);
+        try {
+          const srtBuffer = extractSrt(fileRes.data);
+          vttContent = srtToVtt(srtBuffer);
+        } catch (e) {
+          vttContent = srtToVtt(fileRes.data); // Fallback to raw buffer
+        }
         break;
       }
       case 'subsource': {
@@ -74,13 +78,14 @@ module.exports = async (req, res) => {
           headers: { 'X-Subs-Api-Key': apiKey },
           responseType: 'arraybuffer'
         });
-        const srtBuffer = extractSrt(fileRes.data);
-        vttContent = srtToVtt(srtBuffer);
+        try {
+          const srtBuffer = extractSrt(fileRes.data);
+          vttContent = srtToVtt(srtBuffer);
+        } catch (e) {
+          vttContent = srtToVtt(fileRes.data); // Fallback to raw buffer
+        }
         break;
       }
-      default:
-        throw new Error("Unknown provider");
-    }
 
     vttCache.set(cacheKey, vttContent);
 
