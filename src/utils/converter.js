@@ -26,3 +26,6 @@ function srtToVtt(srtBuffer) {
 
   return 'WEBVTT\n\n' + text;
 }
+
+// THIS WAS MISSING
+module.exports = { srtToVtt };
