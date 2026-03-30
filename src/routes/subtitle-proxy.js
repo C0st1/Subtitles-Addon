@@ -34,13 +34,12 @@ module.exports = async (req, res) => {
         const apiKey = config.opensubtitles_api_key || process.env.OPENSUBTITLES_API_KEY;
         if (!apiKey) throw new Error("Missing OpenSubtitles API Key");
         
-        // We override User-Agent here ONLY because OpenSubtitles API strictly requires an App Name
         const dlRes = await http.post('https://api.opensubtitles.com/api/v1/download', 
           { file_id: payload.id },
           { headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleAggregator v1.0.0', 'Accept': 'application/json' } }
         );
         
-        if (!dlRes.data.link) throw new Error("OpenSubtitles API denied the download link (Rate limit or Authentication).");
+        if (!dlRes.data.link) throw new Error("OpenSubtitles API denied the download link.");
         
         const fileRes = await http.get(dlRes.data.link, { responseType: 'arraybuffer' });
         vttContent = srtToVtt(Buffer.from(fileRes.data));
@@ -54,11 +53,9 @@ module.exports = async (req, res) => {
         const fileRes = await http.get(dlUrl, { responseType: 'arraybuffer' });
         const fileBuffer = Buffer.from(fileRes.data);
         try {
-          vttContent = srtToVtt(extractSrt(fileBuffer));
+          // Added await here
+          vttContent = srtToVtt(await extractSrt(fileBuffer));
         } catch (e) {
-          if (fileBuffer.toString('utf8', 0, 4) === 'Rar!') {
-            throw new Error('RAR archives are not currently supported');
-          }
           vttContent = srtToVtt(fileBuffer); 
         }
         break;
@@ -76,11 +73,9 @@ module.exports = async (req, res) => {
         const fileRes = await http.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
         const fileBuffer = Buffer.from(fileRes.data);
         try {
-          vttContent = srtToVtt(extractSrt(fileBuffer));
+          // Added await here
+          vttContent = srtToVtt(await extractSrt(fileBuffer));
         } catch (e) {
-          if (fileBuffer.toString('utf8', 0, 4) === 'Rar!') {
-            throw new Error('RAR archives are not currently supported');
-          }
           vttContent = srtToVtt(fileBuffer); 
         }
         break;
@@ -92,7 +87,6 @@ module.exports = async (req, res) => {
         const fileRes = await http.get(`https://api.subs.ro/v1.0/subtitle/${payload.id}/download`, {
           headers: { 
             'X-Subs-Api-Key': apiKey,
-            // CRITICAL: Override the fake Chrome headers
             'User-Agent': 'SubtitleAggregator v1.0.0',
             'Accept': '*/*'
           },
@@ -101,11 +95,9 @@ module.exports = async (req, res) => {
         
         const fileBuffer = Buffer.from(fileRes.data);
         try {
-          vttContent = srtToVtt(extractSrt(fileBuffer));
+          // Added await here
+          vttContent = srtToVtt(await extractSrt(fileBuffer));
         } catch (e) {
-          if (fileBuffer.toString('utf8', 0, 4) === 'Rar!') {
-            throw new Error('RAR archives are not currently supported');
-          }
           vttContent = srtToVtt(fileBuffer); 
         }
         break;
