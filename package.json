@@ -1,7 +1,7 @@
 {
-  "name": "stremio-subtitle-aggregator",
+  "name": "stremio-subtitle-hub",
   "version": "1.0.0",
-  "description": "Stremio addon aggregating subtitles from OpenSubtitles, SubDL, SubSource",
+  "description": "Stremio addon with subtitles from OpenSubtitles, SubDL, SubSource",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
