@@ -47,7 +47,7 @@ module.exports = async (args) => {
         return withTimeout(PROVIDERS[source](fetchParams), 8000)
           .catch(err => {
             logger.error(source, `Provider failed: ${err.message}`, { imdbId: parsedId.imdbId });
-            return[]; // Fail gracefully
+            return []; // Fail gracefully
           });
       });
 
@@ -58,13 +58,13 @@ module.exports = async (args) => {
       .flatMap(r => r.value);
 
     // Construct proxy URLs
-    // We pass the config as a base64 encoded query parameter to keep the proxy stateless
     const configBase64 = Buffer.from(JSON.stringify(config)).toString('base64url');
     
     const formattedSubtitles = subtitles.map(sub => {
-      // Base URL detection (Vercel provides VERCEL_URL, otherwise fallback to a default or req host if available)
-      // Since we don't have req here, we rely on VERCEL_URL or a relative path if supported by Stremio
-      const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:7000';
+      // FIX: Use the injected host from index.js middleware instead of process.env
+      const host = config.addon_host || 'localhost:7000';
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      const baseUrl = `${protocol}://${host}`;
       
       let proxyUrl = `${baseUrl}/subtitle/${sub.provider}/${sub.id}.vtt?config=${configBase64}`;
 
@@ -83,6 +83,6 @@ module.exports = async (args) => {
     return { subtitles: formattedSubtitles };
   } catch (error) {
     logger.error('system', `Handler error: ${error.message}`);
-    return { subtitles:[] };
+    return { subtitles: [] };
   }
 };
