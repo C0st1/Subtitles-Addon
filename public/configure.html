@@ -333,20 +333,6 @@
           <input type="password" id="key_subsource" placeholder="API Key">
         </div>
 
-        <div class="provider-card">
-          <div class="provider-header">
-            <span class="provider-name">Subs.ro
-              <span class="tooltip">?<span class="tooltiptext">Free API key available at subs.ro/api</span></span>
-            </span>
-            <label class="switch">
-              <input type="checkbox" id="check_subsro" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-          <input type="password" id="key_subsro" placeholder="API Key">
-        </div>
-      </div>
-
       <span class="section-label">Preferred Languages</span>
       <div class="lang-container" id="langPicker">
         <div class="lang-chip" data-code="eng">English</div>
@@ -389,7 +375,7 @@
     });
 
     function generate() {
-      const providers = ['opensubtitles', 'subdl', 'subsource', 'subsro'];
+      const providers = ['opensubtitles', 'subdl', 'subsource'];
       const enabledSources = providers.filter(p => document.getElementById(`check_${p}`).checked);
       const langs = Array.from(document.querySelectorAll('.lang-chip.active')).map(c => c.dataset.code);
 
@@ -402,7 +388,6 @@
         opensubtitles_api_key: document.getElementById('key_opensubtitles').value.trim(),
         subdl_api_key: document.getElementById('key_subdl').value.trim(),
         subsource_api_key: document.getElementById('key_subsource').value.trim(),
-        subsro_api_key: document.getElementById('key_subsro').value.trim(),
         languages: langs.join(','),
         enabled_sources: enabledSources.join(','),
         force_encoding_detection: document.getElementById('force_encoding').checked
