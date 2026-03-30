@@ -1,8 +1,8 @@
-const axios = require('axios');
 const LRU = require('lru-cache');
 const logger = require('../utils/logger');
 const { srtToVtt } = require('../utils/converter');
 const { extractSrt } = require('../utils/zip');
+const { http } = require('../utils/http');
 
 // Ephemeral L2 Cache for VTT content
 const vttCache = new LRU({
@@ -34,29 +34,27 @@ module.exports = async (req, res) => {
         const apiKey = config.opensubtitles_api_key || process.env.OPENSUBTITLES_API_KEY;
         if (!apiKey) throw new Error("Missing OpenSubtitles API Key");
         
-        const dlRes = await axios.post('https://api.opensubtitles.com/api/v1/download', 
+        // We override User-Agent here ONLY because OpenSubtitles API strictly requires an App Name
+        const dlRes = await http.post('https://api.opensubtitles.com/api/v1/download', 
           { file_id: payload.id },
-          { headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleAggregator v1.0.0' } }
+          { headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleAggregator v1.0.0', 'Accept': 'application/json' } }
         );
         
         if (!dlRes.data.link) throw new Error("OpenSubtitles API denied the download link (Rate limit or Authentication).");
         
-        const fileRes = await axios.get(dlRes.data.link, { responseType: 'arraybuffer' });
-        const fileBuffer = Buffer.from(fileRes.data);
-        vttContent = srtToVtt(fileBuffer);
+        const fileRes = await http.get(dlRes.data.link, { responseType: 'arraybuffer' });
+        vttContent = srtToVtt(Buffer.from(fileRes.data));
         break;
       }
       case 'subdl': {
-        // CRITICAL FIX: Ensure valid SubDL URL construction
         const dlUrl = payload.url.startsWith('http') 
             ? payload.url 
             : `https://dl.subdl.com${payload.url.startsWith('/') ? '' : '/'}${payload.url}`;
             
-        const fileRes = await axios.get(dlUrl, { responseType: 'arraybuffer' });
+        const fileRes = await http.get(dlUrl, { responseType: 'arraybuffer' });
         const fileBuffer = Buffer.from(fileRes.data);
         try {
-          const srtBuffer = extractSrt(fileBuffer);
-          vttContent = srtToVtt(srtBuffer);
+          vttContent = srtToVtt(extractSrt(fileBuffer));
         } catch (e) {
           vttContent = srtToVtt(fileBuffer); 
         }
@@ -64,7 +62,7 @@ module.exports = async (req, res) => {
       }
       case 'subsource': {
         const apiKey = config.subsource_api_key || process.env.SUBSOURCE_API_KEY;
-        const dlRes = await axios.post('https://api.subsource.net/api/downloadSub', {
+        const dlRes = await http.post('https://api.subsource.net/api/downloadSub', {
           movie: payload.slug,
           lang: payload.lang,
           id: payload.id
@@ -72,11 +70,10 @@ module.exports = async (req, res) => {
         
         if (!dlRes.data.subUrl) throw new Error("SubSource did not return a valid download URL.");
         
-        const fileRes = await axios.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
+        const fileRes = await http.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
         const fileBuffer = Buffer.from(fileRes.data);
         try {
-          const srtBuffer = extractSrt(fileBuffer);
-          vttContent = srtToVtt(srtBuffer);
+          vttContent = srtToVtt(extractSrt(fileBuffer));
         } catch (e) {
           vttContent = srtToVtt(fileBuffer); 
         }
@@ -86,15 +83,14 @@ module.exports = async (req, res) => {
         const apiKey = config.subsro_api_key || process.env.SUBSRO_API_KEY;
         if (!apiKey) throw new Error("Missing Subs.ro API Key");
         
-        const fileRes = await axios.get(`https://api.subs.ro/v1.0/subtitle/${payload.id}/download`, {
+        const fileRes = await http.get(`https://api.subs.ro/v1.0/subtitle/${payload.id}/download`, {
           headers: { 'X-Subs-Api-Key': apiKey },
           responseType: 'arraybuffer'
         });
         
         const fileBuffer = Buffer.from(fileRes.data);
         try {
-          const srtBuffer = extractSrt(fileBuffer);
-          vttContent = srtToVtt(srtBuffer);
+          vttContent = srtToVtt(extractSrt(fileBuffer));
         } catch (e) {
           vttContent = srtToVtt(fileBuffer); 
         }
@@ -112,7 +108,6 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     logger.error('proxy', `Failed to serve subtitle: ${error.message}`, { provider });
-    // Keep 404 so Stremio properly skips/fails if network requests to providers crash
     res.status(404).send('Subtitle not found or failed to process.');
   }
 };
