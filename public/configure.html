@@ -347,7 +347,7 @@
       
       // FIX: The stremio:// protocol should point to the base config path without manifest.json 
       // for better compatibility with different Stremio versions/platforms.
-      const installUrl = `stremio://${host}/${encoded}`;
+      const installUrl = `stremio://${host}/${encoded}/manifest.json`;
       
       document.getElementById('stremioLink').href = installUrl;
       document.getElementById('manualUrl').innerText = manifestUrl;
