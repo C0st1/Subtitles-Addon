@@ -95,8 +95,13 @@ module.exports = async (req, res) => {
         
         const fileBuffer = Buffer.from(fileRes.data);
         try {
-          // Added await here
-          vttContent = srtToVtt(await extractSrt(fileBuffer));
+          // Use the new listSrtFiles function instead of just extractSrt
+          const { listSrtFiles } = require('../utils/zip'); 
+          const allFiles = await listSrtFiles(fileBuffer);
+          
+          // Try to find the file that matches the release name we saved in the payload
+          const matchedFile = allFiles.find(f => f.name.includes(payload.fileName)) || allFiles[0];
+          vttContent = srtToVtt(matchedFile.data);
         } catch (e) {
           vttContent = srtToVtt(fileBuffer); 
         }
