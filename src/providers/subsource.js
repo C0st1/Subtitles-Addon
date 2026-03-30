@@ -29,7 +29,9 @@ module.exports = async (params) => {
   try {
     // Search for the movie/show slug
     const searchRes = await http.post('https://api.subsource.net/api/searchMovie', { query: title }, { headers });
-    const match = searchRes.data.found?.find(m => m.title.toLowerCase() === title.toLowerCase());
+    
+    // SAFE: Use optional chaining in case the API returns an HTML 502/503 page instead of JSON
+    const match = searchRes?.data?.found?.find(m => m.title.toLowerCase() === title.toLowerCase());
     if (!match) return [];
 
     const movieSlug = match.folderName;
@@ -42,7 +44,9 @@ module.exports = async (params) => {
     }, { headers });
 
     const results = [];
-    for (const sub of getRes.data.subs || []) {
+    
+    // SAFE: Use optional chaining and fallback to empty array
+    for (const sub of getRes?.data?.subs || []) {
       const isoLang = fromProviderCode(sub.lang, 'subsource');
       if (!isoLang) continue;
 
