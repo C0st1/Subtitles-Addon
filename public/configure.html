@@ -106,7 +106,6 @@
       align-items: center;
     }
 
-    /* Tooltip CSS */
     .tooltip {
       position: relative;
       display: inline-flex;
@@ -332,6 +331,7 @@
           </div>
           <input type="password" id="key_subsource" placeholder="API Key">
         </div>
+      </div>
 
       <span class="section-label">Preferred Languages</span>
       <div class="lang-container" id="langPicker">
@@ -403,11 +403,7 @@
       const host = window.location.host;
       const protocol = window.location.protocol;
       
-      // The manual URL needs manifest.json
       const manifestUrl = `${protocol}//${host}/${encoded}/manifest.json`;
-      
-      // FIX: The stremio:// protocol should point to the base config path without manifest.json 
-      // for better compatibility with different Stremio versions/platforms.
       const installUrl = `stremio://${host}/${encoded}/manifest.json`;
       
       document.getElementById('stremioLink').href = installUrl;
