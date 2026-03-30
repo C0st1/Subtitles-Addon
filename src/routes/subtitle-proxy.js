@@ -6,8 +6,8 @@ const { http } = require('../utils/http');
 
 // Ephemeral L2 Cache for VTT content
 const vttCache = new LRU({
-  max: 500,
-  ttl: 1000 * 60 * 60 // 1 hour
+  max: 2000, // Increase cache size
+  ttl: 1000 * 60 * 60 * 24 // Increase to 24 hours
 });
 
 module.exports = async (req, res) => {
