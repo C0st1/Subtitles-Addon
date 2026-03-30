@@ -82,6 +82,27 @@ app.get('/configure', (req, res) => res.send(configureHtml));
 // Mount the custom subtitle proxy route
 app.get('/subtitle/:provider/:subtitleId.vtt', proxyRoute);
 
+// Middleware to decode Base64URL config so stremio-addon-sdk can process it
+app.use((req, res, next) => {
+  const match = req.url.match(/^\/([a-zA-Z0-9-_]+)\/(.*)$/);
+  if (match) {
+    try {
+      // Safely decode Base64URL
+      let b64 = match[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4) b64 += '=';
+      const decoded = Buffer.from(b64, 'base64').toString('utf8');
+      
+      JSON.parse(decoded); // Validate it is valid JSON
+      
+      // Rewrite the URL into standard URL-encoded JSON for the SDK router
+      req.url = `/${encodeURIComponent(decoded)}/${match[2]}`;
+    } catch (e) {
+      // Not a valid base64 config, just proceed
+    }
+  }
+  next();
+});
+
 // Mount the Stremio Addon SDK router
 const addonRouter = getRouter(addonInterface);
 app.use('/', addonRouter);
