@@ -33,7 +33,7 @@ module.exports = {
     {
       key: "enabled_sources",
       type: "text",
-      title: "Enabled sources (comma-separated: opensubtitles,subdl,subsource,subsro)"
+      title: "Enabled sources (comma-separated: opensubtitles,subdl,subsource)"
     },
     {
       key: "force_encoding_detection",
