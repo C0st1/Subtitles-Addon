@@ -32,11 +32,12 @@ module.exports = async (args) => {
       .split(',').map(s => s.trim().toLowerCase());
 
     const fetchParams = {
-      ...parsedId,
-      type,
-      languages,
-      config
-    };
+  ...parsedId,
+  type,
+  languages,
+  config,
+  title: args.extra?.show_name || args.extra?.filename // Try to pass title hints here
+};
 
     // Execute enabled providers in parallel with an 8-second timeout
     const promises = enabledSources
