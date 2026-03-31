@@ -35,7 +35,7 @@ module.exports = async (req, res) => {
         if (!apiKey) throw new Error("Missing OpenSubtitles API Key");
         
         const dlRes = await http.post('https://api.opensubtitles.com/api/v1/download', 
-          { file_id: payload.id },
+          { file_id: parseInt(payload.id, 10) },
           { headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleHub v1.0.0', 'Accept': 'application/json' } }
         );
         
@@ -50,10 +50,9 @@ module.exports = async (req, res) => {
             ? payload.url 
             : `https://dl.subdl.com${payload.url.startsWith('/') ? '' : '/'}${payload.url}`;
             
-        const fileRes = await http.get(dlUrl, { responseType: 'arraybuffer' });
+        const fileRes = await http.get(encodeURI(dlUrl), { responseType: 'arraybuffer' });
         subBuffer = Buffer.from(fileRes.data);
         
-        // Safely check for ZIP/RAR magic bytes before extracting
         if ((subBuffer[0] === 0x50 && subBuffer[1] === 0x4B) || subBuffer.toString('utf8', 0, 4) === 'Rar!') {
           subBuffer = await extractSrt(subBuffer, payload.lang);
         }
@@ -81,8 +80,7 @@ module.exports = async (req, res) => {
         throw new Error("Unknown provider");
     }
 
-    // Serve either pure Decoded SRT (for local proxy) or VTT (for direct playback)
-    const finalContent = isSrt ? decodeSrt(subBuffer) : srtToVtt(subBuffer);
+    const finalContent = isSrt ? decodeSrt(subBuffer, payload.lang) : srtToVtt(subBuffer, payload.lang);
 
     cache.set(cacheKey, finalContent);
 
