@@ -4,10 +4,12 @@ const iconv = require('iconv-lite');
 /**
  * Decodes the raw buffer using chardet and returns a clean UTF-8 string.
  */
-function decodeSrt(buffer) {
+function decodeSrt(buffer, lang = '') {
   let encoding = chardet.detect(buffer) || 'utf8';
   
-  if (['ISO-8859-1', 'windows-1252'].includes(encoding)) {
+  const easternLangs = ['ron', 'rum', 'hun', 'cze', 'pol', 'slv', 'hrv'];
+  
+  if (easternLangs.includes(lang.toLowerCase()) && ['ISO-8859-1', 'windows-1252'].includes(encoding)) {
     encoding = 'windows-1250'; 
   }
 
@@ -18,8 +20,8 @@ function decodeSrt(buffer) {
 /**
  * Convert SRT buffer to WebVTT format.
  */
-function srtToVtt(buffer) {
-  let text = decodeSrt(buffer);
+function srtToVtt(buffer, lang = '') {
+  let text = decodeSrt(buffer, lang);
 
   // Check if it's already a VTT file or an Advanced SubStation Alpha (ASS) file
   if (text.trim().startsWith('WEBVTT') || text.trim().startsWith('[Script Info]')) {
