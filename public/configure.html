@@ -141,10 +141,9 @@
       transition: opacity 0.3s;
       font-weight: 500;
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-      pointer-events: auto; /* Allows clicking inside tooltip */
+      pointer-events: auto;
     }
 
-    /* Invisible bridge to keep tooltip open while moving mouse to it */
     .tooltip::after {
       content: "";
       position: absolute;
@@ -174,7 +173,6 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 32px;
     }
 
     .lang-chip {
@@ -367,17 +365,6 @@
         <div class="lang-chip" data-code="por">Portuguese</div>
         <div class="lang-chip" data-code="gre">Greek</div>
       </div>
-
-      <div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.03); padding:12px; border-radius:12px; border: 1px solid var(--border)">
-        <label class="switch">
-          <input type="checkbox" id="force_encoding">
-          <span class="slider"></span>
-        </label>
-        <div>
-          <div style="font-size:13px; font-weight:600">Strict Encoding Detection</div>
-          <div style="font-size:11px; color:var(--text-muted)">Fixes broken characters in Romanian/Eastern European subs.</div>
-        </div>
-      </div>
     </div>
 
     <div class="footer">
@@ -411,8 +398,7 @@
         subdl_api_key: document.getElementById('key_subdl').value.trim(),
         subsource_api_key: document.getElementById('key_subsource').value.trim(),
         languages: langs.join(','),
-        enabled_sources: enabledSources.join(','),
-        force_encoding_detection: document.getElementById('force_encoding').checked
+        enabled_sources: enabledSources.join(',')
       };
 
       Object.keys(config).forEach(k => !config[k] && delete config[k]);
