@@ -34,11 +34,6 @@ module.exports = {
       key: "enabled_sources",
       type: "text",
       title: "Enabled sources (comma-separated: opensubtitles,subdl,subsource)"
-    },
-    {
-      key: "force_encoding_detection",
-      type: "checkbox",
-      title: "Force Stremio local encoding detection (fallback for severe diacritic issues)"
     }
   ]
 };
