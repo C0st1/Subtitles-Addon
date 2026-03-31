@@ -13,7 +13,6 @@ module.exports = async (params) => {
   const ssLangs = languages.map(l => toProviderCode(l, 'subsource')).filter(Boolean);
   if (!ssLangs.length) return [];
 
-  // OPTIMIZATION: Use provided title to skip external API hop
   let title = providedTitle;
   if (!title) {
     try {
@@ -24,19 +23,18 @@ module.exports = async (params) => {
     }
   }
 
+  if (!title) return [];
+
   const headers = apiKey ? { 'apiKey': apiKey } : {};
 
   try {
-    // Search for the movie/show slug
     const searchRes = await http.post('https://api.subsource.net/api/searchMovie', { query: title }, { headers });
     
-    // SAFE: Use optional chaining in case the API returns an HTML 502/503 page instead of JSON
-    const match = searchRes?.data?.found?.find(m => m.title.toLowerCase() === title.toLowerCase());
+    const match = searchRes?.data?.found?.find(m => m.title?.toLowerCase() === title.toLowerCase());
     if (!match) return [];
 
     const movieSlug = match.folderName;
 
-    // Get subtitles
     const getRes = await http.post('https://api.subsource.net/api/getMovie', {
       movieName: movieSlug,
       langs: ssLangs,
@@ -45,7 +43,6 @@ module.exports = async (params) => {
 
     const results = [];
     
-    // SAFE: Use optional chaining and fallback to empty array
     for (const sub of getRes?.data?.subs || []) {
       const isoLang = fromProviderCode(sub.lang, 'subsource');
       if (!isoLang) continue;
