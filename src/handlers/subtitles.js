@@ -46,7 +46,6 @@ module.exports = async (args) => {
           });
       });
 
-    // We can safely use Promise.all because internal catch blocks prevent rejections
     const results = await Promise.all(promises);
     const subtitles = results.flatMap(r => r);
 
@@ -57,13 +56,7 @@ module.exports = async (args) => {
       const protocol = host.includes('localhost') ? 'http' : 'https';
       const baseUrl = `${protocol}://${host}`;
       
-      let proxyUrl = `${baseUrl}/subtitle/${sub.provider}/${sub.id}.vtt?config=${configBase64}`;
-
-      if (config.force_encoding_detection) {
-        // Feed the raw SRT string into Stremio's internal encoding proxy instead of VTT
-        const srtProxyUrl = `${baseUrl}/subtitle/${sub.provider}/${sub.id}.srt?config=${configBase64}`;
-        proxyUrl = `http://127.0.0.1:11470/subtitles.vtt?from=${encodeURIComponent(srtProxyUrl)}`;
-      }
+      const proxyUrl = `${baseUrl}/subtitle/${sub.provider}/${sub.id}.vtt?config=${configBase64}`;
 
       return {
         id: `${sub.provider}-${sub.id}`,
