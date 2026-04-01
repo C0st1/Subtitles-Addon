@@ -1,7 +1,7 @@
 {
   "name": "stremio-subtitle-hub",
-  "version": "1.2.0",
-  "description": "Stremio addon that aggregates subtitles from OpenSubtitles, SubDL and SubSource",
+  "version": "1.3.0",
+  "description": "Stremio addon that aggregates subtitles from OpenSubtitles, SubDL, SubSource, Addic7ed with machine translation fallback",
   "main": "src/index.js",
   "private": true,
   "license": "MIT",
@@ -29,6 +29,7 @@
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "iconv-lite": "^0.6.3",
+    "ioredis": "^5.4.1",
     "lru-cache": "^10.2.0",
     "stremio-addon-sdk": "^1.1.4"
   },

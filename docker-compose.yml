@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  subtitle-hub:
+    build: .
+    ports:
+      - "7000:7000"
+    environment:
+      - NODE_ENV=production
+      - PORT=7000
+      - OPENSUBTITLES_API_KEY=${OPENSUBTITLES_API_KEY:-}
+      - SUBDL_API_KEY=${SUBDL_API_KEY:-}
+      - SUBSOURCE_API_KEY=${SUBSOURCE_API_KEY:-}
+      - REDIS_URL=redis://redis:6379
+      - RATE_LIMIT_MAX=100
+      - RATE_LIMIT_WINDOW_MS=60000
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  redis-data:
