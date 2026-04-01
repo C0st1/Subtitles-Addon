@@ -359,9 +359,9 @@
       <!-- Security Warning -->
       <div class="security-warning" role="alert">
         <strong>Security Notice</strong>
-        API keys entered below will be encoded in the addon URL. For maximum security,
-        configure API keys as server environment variables instead. The subtitle proxy
-        will automatically use environment variables as fallback.
+        API keys are used securely via environment variables when configured server-side.
+        When using the URL-based config below, keys are encoded into the addon URL.
+        For maximum security, set API keys as server environment variables instead.
       </div>
 
       <span class="section-label" id="providers-label">Providers & API Keys</span>
@@ -472,11 +472,12 @@
     </div>
   </div>
 
-  <script>
+  <!-- Inline script (CSP nonce is injected by server) -->
+  <script nonce="{{CSP_NONCE}}">
     // Language chip interaction with keyboard and click support
-    document.querySelectorAll('.lang-chip').forEach(chip => {
-      chip.addEventListener('click', () => toggleChip(chip));
-      chip.addEventListener('keydown', (e) => {
+    document.querySelectorAll('.lang-chip').forEach(function(chip) {
+      chip.addEventListener('click', function() { toggleChip(chip); });
+      chip.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           toggleChip(chip);
@@ -485,7 +486,7 @@
     });
 
     function toggleChip(chip) {
-      const isActive = chip.classList.toggle('active');
+      var isActive = chip.classList.toggle('active');
       chip.setAttribute('aria-checked', isActive ? 'true' : 'false');
     }
 
@@ -493,9 +494,13 @@
     document.getElementById('generateBtn').addEventListener('click', generate);
 
     function generate() {
-      const providers = ['opensubtitles', 'subdl', 'subsource'];
-      const enabledSources = providers.filter(p => document.getElementById(`check_${p}`).checked);
-      const langs = Array.from(document.querySelectorAll('.lang-chip.active')).map(c => c.dataset.code);
+      var providers = ['opensubtitles', 'subdl', 'subsource'];
+      var enabledSources = providers.filter(function(p) {
+        return document.getElementById('check_' + p).checked;
+      });
+      var langs = Array.from(document.querySelectorAll('.lang-chip.active')).map(function(c) {
+        return c.dataset.code;
+      });
 
       if (langs.length === 0) {
         alert("Please select at least one preferred language!");
@@ -507,7 +512,7 @@
         return;
       }
 
-      const config = {
+      var config = {
         opensubtitles_api_key: document.getElementById('key_opensubtitles').value.trim(),
         subdl_api_key: document.getElementById('key_subdl').value.trim(),
         subsource_api_key: document.getElementById('key_subsource').value.trim(),
@@ -516,18 +521,20 @@
       };
 
       // Remove empty values
-      Object.keys(config).forEach(k => !config[k] && delete config[k]);
+      Object.keys(config).forEach(function(k) {
+        if (!config[k]) delete config[k];
+      });
 
-      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))))
+      var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');
 
-      const host = window.location.host;
-      const protocol = window.location.protocol;
+      var host = window.location.host;
+      var protocol = window.location.protocol;
 
-      const manifestUrl = `${protocol}//${host}/${encoded}/manifest.json`;
-      const installUrl = `stremio://${host}/${encoded}/manifest.json`;
+      var manifestUrl = protocol + '//' + host + '/' + encoded + '/manifest.json';
+      var installUrl = 'stremio://' + host + '/' + encoded + '/manifest.json';
 
       document.getElementById('stremioLink').href = installUrl;
       document.getElementById('manualUrl').innerText = manifestUrl;
