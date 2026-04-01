@@ -78,6 +78,21 @@ const langMap = {
   'heb': { opensubtitles: 'he', subdl: 'HE', subsource: 'hebrew' },
 };
 
+// Reverse lookup cache: "providerName:lowercaseCode" → iso6392
+const reverseCache = new Map();
+
+/**
+ * Build the reverse lookup cache on first use.
+ */
+function ensureReverseCache() {
+  if (reverseCache.size > 0) return;
+  for (const [iso, providers] of Object.entries(langMap)) {
+    for (const [providerName, code] of Object.entries(providers)) {
+      reverseCache.set(`${providerName}:${code.toLowerCase()}`, iso);
+    }
+  }
+}
+
 /**
  * Convert a Stremio ISO 639-2 code to a provider-specific language code.
  * @param {string} iso6392Code
@@ -91,18 +106,15 @@ function toProviderCode(iso6392Code, providerName) {
 
 /**
  * Convert a provider-specific language code back to a Stremio ISO 639-2 code.
+ * FIX: Uses pre-built reverse cache for O(1) lookup with normalized keys.
  * @param {string} providerCode - Provider-specific language code
  * @param {string} providerName - 'opensubtitles', 'subdl', or 'subsource'
  * @returns {string|null} ISO 639-2 code, or null if not found
  */
 function fromProviderCode(providerCode, providerName) {
-  for (const [iso, providers] of Object.entries(langMap)) {
-    if (providers[providerName] &&
-        providers[providerName].toLowerCase() === providerCode.toLowerCase()) {
-      return iso;
-    }
-  }
-  return null;
+  if (!providerCode) return null;
+  ensureReverseCache();
+  return reverseCache.get(`${providerName}:${providerCode.toLowerCase()}`) || null;
 }
 
 /**
