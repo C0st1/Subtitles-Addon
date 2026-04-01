@@ -62,10 +62,11 @@ app.use(helmet({
         res.locals.cspNonce = nonce;
         return `'nonce-${nonce}'`;
       }],
-      styleSrc: ["'self'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https://raw.githubusercontent.com"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "https://api.opensubtitles.com", "https://api.subdl.com", "https://api.subsource.net", "https://v3-cinemeta.strem.io", "https://dl.subdl.com", "https://www.opensubtitles.com"],
+      formAction: ["'self'"],
     },
   },
 }));
