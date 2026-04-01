@@ -156,31 +156,36 @@ module.exports = async (req, res) => {
 
       case 'subsource': {
         const apiKey = config.subsource_api_key || process.env.SUBSOURCE_API_KEY;
-
-        const dlRes = await http.post('https://api.subsource.net/api/downloadSub', {
-          movie: payload.slug,
-          lang: payload.lang,
-          id: payload.id
-        }, { headers: { ...(apiKey && { 'apiKey': apiKey }) } });
-
-        if (!dlRes?.data?.subUrl) {
-          return sendError(res, 502, 'SubSource did not return a valid download URL.');
+        if (!apiKey) {
+          return sendError(res, 502, 'SubSource API key not configured.');
         }
 
-        // Validate the download URL (SSRF protection) — async with DNS check
-        const urlCheck = await validateUrl(dlRes.data.subUrl);
-        if (!urlCheck.valid) {
-          logger.error('proxy', `SubSource download URL failed validation: ${urlCheck.reason}`);
-          return sendError(res, 502, 'Invalid download URL from provider.');
+        // New v1 API: download returns ZIP directly (no intermediate URL)
+        // Support both new format {subtitleId} and legacy format {id, slug, lang}
+        const subtitleId = payload.subtitleId || payload.id;
+        if (!subtitleId) {
+          return sendError(res, 400, 'Invalid SubSource subtitle ID.');
         }
 
-        const fileRes = await http.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
-        subBuffer = Buffer.from(fileRes.data);
+        const dlRes = await http.get(
+          `https://api.subsource.net/api/v1/subtitles/${subtitleId}/download`,
+          {
+            headers: {
+              'X-API-Key': apiKey,
+              'Accept': 'application/zip',
+            },
+            responseType: 'arraybuffer',
+            timeout: 15000,
+          }
+        );
+
+        subBuffer = Buffer.from(dlRes.data);
 
         if (subBuffer.length > MAX_SUBTITLE_SIZE) {
           return sendError(res, 502, 'Subtitle file too large.');
         }
 
+        // SubSource v1 always returns ZIP — extract SRT
         if (isArchive(subBuffer)) {
           subBuffer = await extractSrt(subBuffer, payload.lang);
         }

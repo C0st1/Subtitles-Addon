@@ -732,15 +732,24 @@ app.get('/subtitle/translate/:payload.:ext', proxyLimiter, async (req, res) => {
         if (isArchive(subBuffer)) subBuffer = await extractSrt(subBuffer, sourceLang);
       } else if (provider === 'subsource') {
         const apiKey = config.subsource_api_key || process.env.SUBSOURCE_API_KEY;
-        const dlRes = await http.post('https://api.subsource.net/api/downloadSub',
-          { movie: decodedSubId.slug, lang: decodedSubId.lang, id: decodedSubId.id },
-          { headers: { ...(apiKey && { 'apiKey': apiKey }) } }
+        if (!apiKey) return res.status(502).send('SubSource API key not configured.');
+
+        // New v1 API: download returns ZIP directly
+        const subtitleId = decodedSubId.subtitleId || decodedSubId.id;
+        if (!subtitleId) return res.status(502).send('Invalid SubSource subtitle ID.');
+
+        const dlRes = await http.get(
+          `https://api.subsource.net/api/v1/subtitles/${subtitleId}/download`,
+          {
+            headers: {
+              'X-API-Key': apiKey,
+              'Accept': 'application/zip',
+            },
+            responseType: 'arraybuffer',
+            timeout: 15000,
+          }
         );
-        if (!dlRes?.data?.subUrl) return res.status(502).send('SubSource download failed.');
-        const urlCheck = await validateUrl(dlRes.data.subUrl);
-        if (!urlCheck.valid) return res.status(502).send('Invalid download URL.');
-        const fileRes = await http.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
-        subBuffer = Buffer.from(fileRes.data);
+        subBuffer = Buffer.from(dlRes.data);
         if (isArchive(subBuffer)) subBuffer = await extractSrt(subBuffer, sourceLang);
       } else {
         return res.status(400).send('Unknown provider for translation.');
