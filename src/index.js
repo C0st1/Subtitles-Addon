@@ -583,10 +583,8 @@ const proxyLimiter = rateLimit({
   }
 });
 
-app.get('/subtitle/:provider/:subtitleId.:ext', proxyLimiter, proxyRoute);
-
 // =========================================================================
-//  Translation proxy route
+//  Translation proxy route (MUST be before the generic :provider route)
 // =========================================================================
 
 app.get('/subtitle/translate/:payload.:ext', proxyLimiter, async (req, res) => {
@@ -727,6 +725,9 @@ app.get('/subtitle/translate/:payload.:ext', proxyLimiter, async (req, res) => {
     res.status(500).send('Translation failed.');
   }
 });
+
+// Subtitle proxy route (generic — catches /subtitle/:provider/:id.:ext)
+app.get('/subtitle/:provider/:subtitleId.:ext', proxyLimiter, proxyRoute);
 
 // =========================================================================
 //  Prefetch route
