@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 const { srtToVtt, decodeSrt } = require('../utils/converter');
 const { extractSrt, isArchive } = require('../utils/zip');
 const { http } = require('../utils/http');
-const { validateUrlSync } = require('../utils/url-validator');
+const { validateUrl } = require('../utils/url-validator');
 
 // Ephemeral L2 Cache with both entry count and total size limits
 const cache = new LRUCache({
@@ -56,29 +56,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Build cache key including language hint from config
-    let langHint = '';
-    const cacheKeyPrefix = `${ext}:${provider}:${subtitleId}`;
-
-    if (cache.has(cacheKeyPrefix)) {
-      res.setHeader('Content-Type', isSrt ? 'text/plain; charset=utf-8' : 'text/vtt; charset=utf-8');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      const cached = cache.get(cacheKeyPrefix);
-      res.setHeader('Content-Length', Buffer.byteLength(cached, 'utf8'));
-      return res.send(cached);
-    }
-
-    // Decode and validate config (API keys may be absent - env vars used as fallback)
-    let config = {};
-    if (configBase64) {
-      try {
-        config = JSON.parse(Buffer.from(configBase64, 'base64url').toString('utf8'));
-      } catch (e) {
-        return sendError(res, 400, 'Invalid config parameter.');
-      }
-    }
-
-    // Decode subtitle ID payload
+    // Decode subtitle ID payload first (needed for cache key)
     let payload;
     try {
       payload = JSON.parse(Buffer.from(subtitleId, 'base64url').toString('utf8'));
@@ -86,16 +64,27 @@ module.exports = async (req, res) => {
       return sendError(res, 400, 'Invalid subtitle ID.');
     }
 
-    // Extract language hint for cache key and archive extraction
-    langHint = payload.lang || '';
-
+    // Build cache key using lang hint from payload
+    const langHint = payload.lang || '';
     const cacheKey = `${ext}:${provider}:${subtitleId}:${langHint}`;
+
+    // Single cache check (FIX: removed dead first check without langHint)
     if (cache.has(cacheKey)) {
       res.setHeader('Content-Type', isSrt ? 'text/plain; charset=utf-8' : 'text/vtt; charset=utf-8');
       res.setHeader('Access-Control-Allow-Origin', '*');
       const cached = cache.get(cacheKey);
       res.setHeader('Content-Length', Buffer.byteLength(cached, 'utf8'));
       return res.send(cached);
+    }
+
+    // Decode config (API keys may be absent — env vars used as fallback)
+    let config = {};
+    if (configBase64) {
+      try {
+        config = JSON.parse(Buffer.from(configBase64, 'base64url').toString('utf8'));
+      } catch (e) {
+        return sendError(res, 400, 'Invalid config parameter.');
+      }
     }
 
     let subBuffer;
@@ -124,8 +113,8 @@ module.exports = async (req, res) => {
           return sendError(res, 502, 'OpenSubtitles API denied the download link.');
         }
 
-        // Validate the download URL (SSRF protection)
-        const urlCheck = validateUrlSync(dlRes.data.link);
+        // Validate the download URL (SSRF protection) — async with DNS check
+        const urlCheck = await validateUrl(dlRes.data.link);
         if (!urlCheck.valid) {
           logger.error('proxy', `OpenSubtitles download URL failed validation: ${urlCheck.reason}`);
           return sendError(res, 502, 'Invalid download URL from provider.');
@@ -145,8 +134,8 @@ module.exports = async (req, res) => {
           ? payload.url
           : `https://dl.subdl.com${payload.url.startsWith('/') ? '' : '/'}${payload.url}`;
 
-        // SSRF protection: validate URL against allowlist
-        const urlCheck = validateUrlSync(dlUrl);
+        // SSRF protection: async validate with DNS check
+        const urlCheck = await validateUrl(dlUrl);
         if (!urlCheck.valid) {
           logger.error('proxy', `SubDL URL failed validation: ${urlCheck.reason}`, { url: dlUrl });
           return sendError(res, 403, 'Blocked: URL not in allowed domains.');
@@ -159,7 +148,6 @@ module.exports = async (req, res) => {
           return sendError(res, 502, 'Subtitle file too large.');
         }
 
-        // Use shared isArchive utility instead of inline magic byte detection
         if (isArchive(subBuffer)) {
           subBuffer = await extractSrt(subBuffer, payload.lang);
         }
@@ -179,8 +167,8 @@ module.exports = async (req, res) => {
           return sendError(res, 502, 'SubSource did not return a valid download URL.');
         }
 
-        // Validate the download URL (SSRF protection)
-        const urlCheck = validateUrlSync(dlRes.data.subUrl);
+        // Validate the download URL (SSRF protection) — async with DNS check
+        const urlCheck = await validateUrl(dlRes.data.subUrl);
         if (!urlCheck.valid) {
           logger.error('proxy', `SubSource download URL failed validation: ${urlCheck.reason}`);
           return sendError(res, 502, 'Invalid download URL from provider.');
@@ -193,7 +181,6 @@ module.exports = async (req, res) => {
           return sendError(res, 502, 'Subtitle file too large.');
         }
 
-        // Use shared isArchive utility
         if (isArchive(subBuffer)) {
           subBuffer = await extractSrt(subBuffer, payload.lang);
         }
@@ -215,7 +202,6 @@ module.exports = async (req, res) => {
     res.send(finalContent);
 
   } catch (error) {
-    // Differentiated error responses based on error type
     const msg = error.message || '';
     logger.error('proxy', `Failed to serve subtitle: ${msg}`, { provider });
 
