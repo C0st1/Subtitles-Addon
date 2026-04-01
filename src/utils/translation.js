@@ -125,8 +125,10 @@ async function translate(text, sourceLang, targetLang) {
 }
 
 /**
- * Translate subtitle lines in batch (chunks of 15 items for efficiency).
- * Uses a unique separator to safely handle multi-line text within items.
+ * Translate subtitle lines one at a time for accuracy.
+ * While slower than batch, this completely eliminates the risk of separator
+ * mangling by Google Translate which caused phantom/duplicate subtitle lines.
+ *
  * @param {string[]} lines - Array of subtitle text items (may contain newlines)
  * @param {string} sourceLang
  * @param {string} targetLang
@@ -135,29 +137,16 @@ async function translate(text, sourceLang, targetLang) {
 async function translateBatch(lines, sourceLang, targetLang) {
   if (!lines || lines.length === 0) return lines;
 
-  const CHUNK_SIZE = 15;
   const results = [];
-  // Unique separator unlikely to appear in subtitle text
-  const SEP = '\n|||';
+  const CONCURRENCY = 5;
 
-  for (let i = 0; i < lines.length; i += CHUNK_SIZE) {
-    const chunk = lines.slice(i, i + CHUNK_SIZE);
-    const text = chunk.join(SEP);
-
-    const translated = await translate(text, sourceLang, targetLang);
-    if (translated) {
-      const splitResult = translated.split(SEP);
-      if (splitResult.length === chunk.length) {
-        // Exact match — safe to use translated items
-        results.push(...splitResult);
-      } else {
-        // Line count mismatch — keep originals to prevent subtitle corruption
-        logger.warn('translation', `Chunk size mismatch: expected ${chunk.length}, got ${splitResult.length}. Keeping originals.`);
-        results.push(...chunk);
-      }
-    } else {
-      // On failure, keep original lines so the subtitle isn't broken
-      results.push(...chunk);
+  // Process in parallel with limited concurrency
+  for (let i = 0; i < lines.length; i += CONCURRENCY) {
+    const batch = lines.slice(i, i + CONCURRENCY);
+    const promises = batch.map(line => translate(line, sourceLang, targetLang));
+    const translated = await Promise.all(promises);
+    for (let j = 0; j < batch.length; j++) {
+      results.push(translated[j] || batch[j]);
     }
   }
 
