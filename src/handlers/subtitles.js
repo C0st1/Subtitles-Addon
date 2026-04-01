@@ -2,6 +2,7 @@
 
 const { parseId } = require('../utils/imdb');
 const logger = require('../utils/logger');
+const { getSupportedLanguages } = require('../config/languages');
 const openSubtitles = require('../providers/opensubtitles');
 const subdl = require('../providers/subdl');
 const subsource = require('../providers/subsource');
@@ -41,16 +42,21 @@ module.exports = async (args) => {
     if (!config) throw new Error("Configuration missing");
 
     const parsedId = parseId(id);
-    const languages = (config.languages || 'eng').split(',').map(l => l.trim().toLowerCase());
+    let languages = (config.languages || 'eng').split(',').map(l => l.trim().toLowerCase());
     const enabledSources = (config.enabled_sources || 'opensubtitles,subdl,subsource')
       .split(',').map(s => s.trim().toLowerCase());
 
-    // Log warning for unsupported languages
-    const { getSupportedLanguages } = require('../config/languages');
+    // Filter unsupported language codes (FIX: remove before passing to providers)
     const supported = getSupportedLanguages();
     const unsupported = languages.filter(l => !supported.includes(l) && !supported.includes(l.substring(0, 3)));
     if (unsupported.length > 0) {
-      logger.warn('system', `Unsupported language codes ignored: ${unsupported.join(', ')}`);
+      logger.warn('system', `Unsupported language codes removed: ${unsupported.join(', ')}`);
+    }
+    languages = languages.filter(l => supported.includes(l) || supported.includes(l.substring(0, 3)));
+
+    if (languages.length === 0) {
+      logger.warn('system', 'No valid languages remaining after filtering');
+      return { subtitles: [] };
     }
 
     const fetchParams = {
@@ -77,10 +83,13 @@ module.exports = async (args) => {
     const results = await Promise.all(promises);
     const subtitles = results.flatMap(r => r);
 
-    // Encode full config into subtitle proxy URLs so the proxy can use API keys
-    // Note: API keys in URLs is inherent to Stremio's config-via-URL architecture.
-    // For server-only deployments, set API keys as environment variables as fallback.
-    const configBase64 = Buffer.from(JSON.stringify(config)).toString('base64url');
+    // Build proxy config WITHOUT API keys (FIX: avoid embedding secrets in URLs).
+    // The proxy falls back to env vars for API keys.
+    const proxyConfig = {
+      addon_host: config.addon_host,
+    };
+
+    const configBase64 = Buffer.from(JSON.stringify(proxyConfig)).toString('base64url');
 
     const formattedSubtitles = subtitles.map(sub => {
       const host = config.addon_host || 'localhost:7000';
