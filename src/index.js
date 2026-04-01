@@ -115,16 +115,53 @@ app.get('/health', (req, res) => {
 // --- Serve configure page (with CSP nonce injection for inline scripts) ---
 const configureHtml = fs.readFileSync(path.join(__dirname, '../public/configure.html'), 'utf8');
 
-function sendConfigurePage(req, res) {
+/**
+ * Send the configure.html page, optionally with pre-fill configuration data.
+ * When prefillConfig is provided, injects it as window.__INITIAL_CONFIG__ so the
+ * frontend can restore form values (used when user returns via the Gear icon).
+ *
+ * @param {object} req
+ * @param {object} res
+ * @param {object|null} prefillConfig - decoded config object to pre-fill, or null
+ */
+function sendConfigurePage(req, res, prefillConfig) {
   const nonce = res.locals.cspNonce || generateNonce();
   res.locals.cspNonce = nonce;
-  const html = configureHtml.replace(/\{\{CSP_NONCE\}\}/g, nonce);
+  let html = configureHtml.replace(/\{\{CSP_NONCE\}\}/g, nonce);
+
+  // Inject initial config for pre-fill (escape to prevent XSS in inline script)
+  if (prefillConfig) {
+    const configJson = JSON.stringify(prefillConfig)
+      .replace(/&/g, '\\u0026')
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e');
+    html = html.replace('{{INITIAL_CONFIG}}', configJson);
+  } else {
+    html = html.replace('{{INITIAL_CONFIG}}', 'null');
+  }
+
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(html);
 }
 
-app.get('/', sendConfigurePage);
-app.get('/configure', sendConfigurePage);
+// --- Base configure page routes (no config segment) ---
+app.get('/', (req, res) => {
+  // Support pre-fill via ?config=BASE64 query parameter as fallback
+  let prefillConfig = null;
+  if (req.query.config) {
+    prefillConfig = decodeConfigFromBase64(req.query.config);
+  }
+  sendConfigurePage(req, res, prefillConfig);
+});
+
+app.get('/configure', (req, res) => {
+  // Support pre-fill via ?config=BASE64 query parameter as fallback
+  let prefillConfig = null;
+  if (req.query.config) {
+    prefillConfig = decodeConfigFromBase64(req.query.config);
+  }
+  sendConfigurePage(req, res, prefillConfig);
+});
 
 // --- Serve logo as static asset ---
 app.get('/logo.png', (req, res) => {
@@ -146,9 +183,20 @@ const proxyLimiter = rateLimit({
 // Subtitle proxy route (with stricter rate limiting)
 app.get('/subtitle/:provider/:subtitleId.:ext', proxyLimiter, proxyRoute);
 
+// --- Paths handled by our custom routes (not forwarded to addonRouter) ---
+const CUSTOM_PATHS = new Set(['manifest.json', 'configure', 'logo.png']);
+
 /**
  * Config middleware: decodes base64url-encoded config from URL path segment.
  * Applies whitelist validation to prevent config key injection.
+ *
+ * For custom-handled paths (manifest.json, configure, logo.png), the decoded
+ * config is attached to req.userConfig WITHOUT rewriting req.url, so our custom
+ * route handlers can access it directly.
+ *
+ * For all other paths (addon API routes like subtitles, catalog, stream), the
+ * URL is rewritten to the stremio-addon-sdk format:
+ *   /{encodedConfigJSON}/manifest.json  →  /{percentEncodedJSON}/manifest.json
  */
 app.use((req, res, next) => {
   const match = req.url.match(/^\/([a-zA-Z0-9-_]+)\/(.*)$/);
@@ -177,7 +225,15 @@ app.use((req, res, next) => {
       configObj = sanitizeConfig(configObj);
       configObj.addon_host = sanitizedHost;
 
-      req.url = `/${encodeURIComponent(JSON.stringify(configObj))}/${match[2]}`;
+      // Store decoded config and segment for custom routes
+      req.userConfig = configObj;
+      req.configSegment = match[1];
+
+      // Only rewrite URL for addon API routes (not our custom-handled paths)
+      const subPath = match[2].split('?')[0]; // Strip query string for comparison
+      if (!CUSTOM_PATHS.has(subPath)) {
+        req.url = `/${encodeURIComponent(JSON.stringify(configObj))}/${match[2]}`;
+      }
     } catch (e) {
       // Log parse/validation errors for debugging
       if (e.message && !e.message.includes('Invalid config') && !e.message.includes('Invalid host')) {
@@ -213,6 +269,83 @@ function sanitizeHost(host) {
   return trimmed;
 }
 
+/**
+ * Decode a base64url-encoded config string into a JSON object.
+ * Used for ?config= query parameter pre-fill on base routes.
+ * Returns null on failure.
+ */
+function decodeConfigFromBase64(b64) {
+  try {
+    let normalized = b64.replace(/-/g, '+').replace(/_/g, '/');
+    while (normalized.length % 4) normalized += '=';
+    const decoded = Buffer.from(normalized, 'base64').toString('utf8');
+    const configObj = JSON.parse(decoded);
+    if (Array.isArray(configObj) || typeof configObj !== 'object' || configObj === null) {
+      return null;
+    }
+    return sanitizeConfig(configObj);
+  } catch (e) {
+    return null;
+  }
+}
+
+// =========================================================================
+//  Custom Manifest & Configure Routes (must be BEFORE addonRouter)
+// =========================================================================
+
+/**
+ * Dynamic manifest with configurationURL injection.
+ *
+ * When installed with config (e.g., https://domain.com/BASE64/manifest.json),
+ * the configurationURL is set to https://domain.com/BASE64/configure so that
+ * the Stremio Gear icon opens the configure page WITH the user's current
+ * settings pre-filled.
+ */
+app.get('/:segment/manifest.json', (req, res) => {
+  const manifest = { ...require('./manifest') };
+  const protocol = req.protocol;
+  const host = req.headers.host;
+
+  // Build configurationURL pointing to the configure page with the same config segment
+  if (req.userConfig) {
+    manifest.behaviorHints.configurationURL = `${protocol}://${host}/${req.configSegment}/configure`;
+  } else {
+    manifest.behaviorHints.configurationURL = `${protocol}://${host}/configure`;
+  }
+
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.json(manifest);
+});
+
+/**
+ * Pre-filled configure page — opened when user clicks the Gear icon.
+ * The config middleware decodes the base64 segment and attaches it to
+ * req.userConfig, which is then injected into the HTML for form pre-fill.
+ */
+app.get('/:segment/configure', (req, res) => {
+  sendConfigurePage(req, res, req.userConfig || null);
+});
+
+/**
+ * Logo served from config-prefixed URL (same logo, different path).
+ */
+app.get('/:segment/logo.png', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/logo.png'));
+});
+
+/**
+ * Base manifest.json (no config segment) — also gets configurationURL.
+ */
+app.get('/manifest.json', (req, res) => {
+  const manifest = { ...require('./manifest') };
+  const protocol = req.protocol;
+  const host = req.headers.host;
+  manifest.behaviorHints.configurationURL = `${protocol}://${host}/configure`;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.json(manifest);
+});
+
+// --- Stremio addon SDK router (handles /subtitles, /catalog, /stream, etc.) ---
 const addonRouter = getRouter(addonInterface);
 app.use('/', addonRouter);
 
