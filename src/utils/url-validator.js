@@ -1,7 +1,6 @@
 'use strict';
 
 const { URL } = require('url');
-const net = require('net');
 const dns = require('dns').promises;
 
 // Allowlisted domains for subtitle downloads
@@ -37,6 +36,10 @@ const PRIVATE_RANGES = [
   { start: '224.0.0.0', end: '255.255.255.255' }
 ];
 
+// DNS result cache to amortize lookup cost across requests (30-second TTL)
+const DNS_CACHE_TTL_MS = 30_000;
+const dnsCache = new Map();
+
 function ipToLong(ip) {
   return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
 }
@@ -49,11 +52,37 @@ function isPrivateIp(ip) {
 }
 
 /**
+ * Resolve a hostname and check DNS cache first.
+ * Returns the list of resolved IPv4 addresses.
+ * @param {string} hostname
+ * @returns {string[]}
+ */
+async function resolveWithCache(hostname) {
+  const cached = dnsCache.get(hostname);
+  if (cached && Date.now() - cached.ts < DNS_CACHE_TTL_MS) {
+    return cached.addresses;
+  }
+
+  const addresses = await dns.resolve4(hostname);
+  dnsCache.set(hostname, { addresses, ts: Date.now() });
+
+  // Prune stale entries periodically (every 100 lookups)
+  if (dnsCache.size > 100) {
+    const now = Date.now();
+    for (const [key, val] of dnsCache) {
+      if (now - val.ts >= DNS_CACHE_TTL_MS) dnsCache.delete(key);
+    }
+  }
+
+  return addresses;
+}
+
+/**
  * Validates that a URL is safe to fetch (not SSRF).
- * Checks protocol, domain allowlist, and private IP ranges.
+ * Checks protocol, domain allowlist, and private IP ranges via DNS resolution.
  * @param {string} rawUrl - The URL to validate
  * @param {'download'|'api'} context - 'download' for subtitle files, 'api' for API calls
- * @returns {{ valid: boolean, reason?: string }}
+ * @returns {Promise<{ valid: boolean, reason?: string }>}
  */
 async function validateUrl(rawUrl, context = 'download') {
   // Must be valid URL
@@ -83,7 +112,7 @@ async function validateUrl(rawUrl, context = 'download') {
 
   // DNS resolution check to prevent IP-based bypass (e.g., DNS rebinding)
   try {
-    const addresses = await dns.resolve4(hostname);
+    const addresses = await resolveWithCache(hostname);
     for (const addr of addresses) {
       if (isPrivateIp(addr)) {
         return { valid: false, reason: `Domain resolves to private IP: ${addr}` };
@@ -97,35 +126,4 @@ async function validateUrl(rawUrl, context = 'download') {
   return { valid: true };
 }
 
-/**
- * Validates a URL for download context (subtitle files).
- * Synchronous version that only checks domain allowlist and format (no DNS check).
- * Use this when DNS checks are too slow for the use case.
- * @param {string} rawUrl
- * @returns {{ valid: boolean, reason?: string }}
- */
-function validateUrlSync(rawUrl) {
-  let parsed;
-  try {
-    parsed = new URL(rawUrl);
-  } catch (e) {
-    return { valid: false, reason: 'Invalid URL format' };
-  }
-
-  if (parsed.protocol !== 'https:') {
-    return { valid: false, reason: 'Only HTTPS protocol is allowed' };
-  }
-
-  const hostname = parsed.hostname.toLowerCase();
-  const isAllowed = ALLOWED_DOMAINS.some(domain =>
-    hostname === domain || hostname.endsWith('.' + domain)
-  );
-
-  if (!isAllowed) {
-    return { valid: false, reason: `Domain not allowed: ${hostname}` };
-  }
-
-  return { valid: true };
-}
-
-module.exports = { validateUrl, validateUrlSync, isPrivateIp };
+module.exports = { validateUrl, isPrivateIp };

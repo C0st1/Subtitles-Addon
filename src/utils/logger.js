@@ -3,14 +3,34 @@
 const SENSITIVE_KEY_PATTERNS = ['api_key', 'apikey', 'token', 'secret', 'password', 'credential', 'auth'];
 
 /**
+ * Get the request ID from AsyncLocalStorage if available.
+ * Falls back to undefined when not in a request context (e.g., startup).
+ */
+function getRequestId() {
+  try {
+    // Attempt to access the AsyncLocalStorage from the Express app.
+    // This requires the app to be loaded; if not yet available, return undefined.
+    const app = require('./index');
+    const asyncLocalStorage = app.get('asyncLocalStorage');
+    if (asyncLocalStorage) {
+      const store = asyncLocalStorage.getStore();
+      return store?.requestId || undefined;
+    }
+  } catch (e) {
+    // Module not yet loaded or no store — ignore
+  }
+  return undefined;
+}
+
+/**
  * Structured JSON logger with automatic sensitive data redaction.
- * Supports request correlation IDs for serverless environments.
+ * Supports request correlation IDs via AsyncLocalStorage (no global state mutation).
  */
 function log(level, provider, message, data = {}) {
   // Log level filtering: suppress INFO in production
   if (process.env.NODE_ENV === 'production' && level === 'INFO') return;
 
-  const requestId = process.env.__REQUEST_ID__ || undefined;
+  const requestId = getRequestId();
 
   // Deep clone data without the performance cost of JSON round-trip
   const redactedData = structuredClone(data);
