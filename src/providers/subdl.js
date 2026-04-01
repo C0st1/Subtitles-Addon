@@ -40,7 +40,8 @@ module.exports = async (params) => {
         id: payload,
         lang: isoLang,
         provider: 'subdl',
-        releaseName: sub.release_name
+        releaseName: sub.release_name,
+        downloads: sub.download_count || 0,
       });
     }
 

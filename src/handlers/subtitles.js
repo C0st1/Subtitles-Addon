@@ -219,7 +219,8 @@ module.exports = async (args) => {
       const mtResults = (await Promise.all(mtPromises)).flat();
 
       if (mtResults.length > 0) {
-        const bestSub = mtResults[0];
+        // Pick the most downloaded English subtitle — higher downloads = better quality
+        const bestSub = mtResults.sort((a, b) => (b.downloads || 0) - (a.downloads || 0))[0];
         const mtPayload = {
           provider: bestSub.provider,
           subtitleId: bestSub.id,

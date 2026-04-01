@@ -46,7 +46,8 @@ module.exports = async (params) => {
           id: payload,
           lang: isoLang,
           provider: 'opensubtitles',
-          releaseName: item.attributes.release
+          releaseName: item.attributes.release,
+          downloads: item.attributes.download_count || 0,
         });
       }
     }

@@ -108,7 +108,8 @@ module.exports = async (params) => {
         id: payload,
         lang: isoLang,
         provider: 'subsource',
-        releaseName: sub.releaseName
+        releaseName: sub.releaseName,
+        downloads: sub.downloads || 0,
       });
     }
 
