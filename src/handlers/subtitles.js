@@ -35,20 +35,6 @@ async function withTimeout(fn, ms) {
   }
 }
 
-/**
- * Creates a safe config object with API keys stripped.
- * This config is safe to embed in URLs (no secrets exposed).
- * @param {Object} config - Full config from Stremio SDK
- * @returns {Object} Config without API keys
- */
-function createSafeConfig(config) {
-  const safe = {};
-  if (config.languages) safe.languages = config.languages;
-  if (config.enabled_sources) safe.enabled_sources = config.enabled_sources;
-  if (config.addon_host) safe.addon_host = config.addon_host;
-  return safe;
-}
-
 module.exports = async (args) => {
   try {
     const { type, id, config } = args;
@@ -91,9 +77,10 @@ module.exports = async (args) => {
     const results = await Promise.all(promises);
     const subtitles = results.flatMap(r => r);
 
-    // Encode ONLY safe config (no API keys) into subtitle URLs
-    const safeConfig = createSafeConfig(config);
-    const configBase64 = Buffer.from(JSON.stringify(safeConfig)).toString('base64url');
+    // Encode full config into subtitle proxy URLs so the proxy can use API keys
+    // Note: API keys in URLs is inherent to Stremio's config-via-URL architecture.
+    // For server-only deployments, set API keys as environment variables as fallback.
+    const configBase64 = Buffer.from(JSON.stringify(config)).toString('base64url');
 
     const formattedSubtitles = subtitles.map(sub => {
       const host = config.addon_host || 'localhost:7000';
