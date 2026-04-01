@@ -125,12 +125,8 @@ async function translate(text, sourceLang, targetLang) {
 }
 
 /**
- * Translate subtitle cues in batch using numbered XML tags as delimiters.
- *
- * Google Translate preserves XML tags, so we wrap each cue in <1>...</1>, <2>...</2> etc.
- * This prevents the separator mangling that caused phantom/duplicate subtitle lines
- * with the old \n||| approach, while keeping batch speed (unlike per-cue translation).
- *
+ * Translate subtitle lines in batch (chunks of 15 items for efficiency).
+ * Uses a unique separator to safely handle multi-line text within items.
  * @param {string[]} lines - Array of subtitle text items (may contain newlines)
  * @param {string} sourceLang
  * @param {string} targetLang
@@ -141,44 +137,28 @@ async function translateBatch(lines, sourceLang, targetLang) {
 
   const CHUNK_SIZE = 15;
   const results = [];
+  // Unique separator unlikely to appear in subtitle text
+  const SEP = '\n|||';
 
   for (let i = 0; i < lines.length; i += CHUNK_SIZE) {
     const chunk = lines.slice(i, i + CHUNK_SIZE);
+    const text = chunk.join(SEP);
 
-    // Wrap each cue in numbered XML tags — Google Translate preserves these intact
-    const tagged = chunk.map((line, idx) => `<${idx + 1}>${line}</${idx + 1}>`).join('\n');
-
-    const translated = await translate(tagged, sourceLang, targetLang);
+    const translated = await translate(text, sourceLang, targetLang);
     if (translated) {
-      // Extract text between matching open/close tags
-      const extracted = [];
-      let allMatched = true;
-
-      for (let j = 0; j < chunk.length; j++) {
-        const openTag = `<${j + 1}>`;
-        const closeTag = `</${j + 1}>`;
-        const startIdx = translated.indexOf(openTag);
-        const endIdx = translated.indexOf(closeTag);
-
-        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-          extracted.push(translated.substring(startIdx + openTag.length, endIdx));
-        } else {
-          allMatched = false;
-          break;
-        }
+      const splitResult = translated.split(SEP);
+      if (splitResult.length === chunk.length) {
+        // Exact match — safe to use translated items
+        results.push(...splitResult);
+      } else {
+        // Line count mismatch — keep originals to prevent subtitle corruption
+        logger.warn('translation', `Chunk size mismatch: expected ${chunk.length}, got ${splitResult.length}. Keeping originals.`);
+        results.push(...chunk);
       }
-
-      if (allMatched && extracted.length === chunk.length) {
-        results.push(...extracted);
-        continue;
-      }
-
-      // Tags were mangled — keep originals for this chunk
-      logger.warn('translation', `Tag extraction failed for chunk at offset ${i}. Keeping originals.`);
+    } else {
+      // On failure, keep original lines so the subtitle isn't broken
+      results.push(...chunk);
     }
-
-    // Fallback: keep original lines
-    results.push(...chunk);
   }
 
   return results;
