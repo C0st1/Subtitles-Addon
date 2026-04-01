@@ -2,25 +2,29 @@ const chardet = require('chardet');
 const iconv = require('iconv-lite');
 
 /**
- * Convert SRT subtitle content to WebVTT format.
- * Handles encoding detection and conversion for non-UTF-8 files.
- * @param {Buffer} srtBuffer - Raw subtitle file buffer
- * @returns {string} VTT-formatted subtitle content
+ * Decodes the raw buffer using chardet and returns a clean UTF-8 string.
  */
-function srtToVtt(srtBuffer) {
-  let encoding = chardet.detect(srtBuffer) || 'utf8';
+function decodeSrt(buffer, lang = '') {
+  let encoding = chardet.detect(buffer) || 'utf8';
   
-  if (['ISO-8859-1', 'windows-1252'].includes(encoding)) {
+  const easternLangs = ['ron', 'rum', 'hun', 'cze', 'pol', 'slv', 'hrv'];
+  
+  if (easternLangs.includes(lang.toLowerCase()) && ['ISO-8859-1', 'windows-1252'].includes(encoding)) {
     encoding = 'windows-1250'; 
   }
 
-  let text = iconv.decode(srtBuffer, iconv.encodingExists(encoding) ? encoding : 'utf8');
+  let text = iconv.decode(buffer, iconv.encodingExists(encoding) ? encoding : 'utf8');
+  return text.replace(/^\uFEFF/, ''); // Strip BOM
+}
 
-  // CRITICAL FIX: Strip hidden Byte Order Marks (BOM) which crash Stremio's VTT parser
-  text = text.replace(/^\uFEFF/, '');
+/**
+ * Convert SRT buffer to WebVTT format.
+ */
+function srtToVtt(buffer, lang = '') {
+  let text = decodeSrt(buffer, lang);
 
-  // Check if it's already a VTT file
-  if (text.trim().startsWith('WEBVTT')) {
+  // Check if it's already a VTT file or an Advanced SubStation Alpha (ASS) file
+  if (text.trim().startsWith('WEBVTT') || text.trim().startsWith('[Script Info]')) {
     return text;
   }
 
@@ -30,4 +34,4 @@ function srtToVtt(srtBuffer) {
   return 'WEBVTT\n\n' + text;
 }
 
-module.exports = { srtToVtt };
+module.exports = { decodeSrt, srtToVtt };
