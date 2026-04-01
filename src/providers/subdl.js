@@ -29,8 +29,7 @@ module.exports = async (params) => {
   // FIX: Use optional chaining consistently (was missing here, present in other providers)
   const results = [];
   for (const sub of res?.data?.subtitles || []) {
-    const isoLang = fromProviderCode(sub.language, 'subdl');
-    if (!isoLang) continue;
+    const isoLang = fromProviderCode(sub.language, 'subdl') || sub.language;
 
     const payload = Buffer.from(JSON.stringify({ url: sub.url })).toString('base64url');
     results.push({
