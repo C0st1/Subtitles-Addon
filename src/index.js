@@ -12,8 +12,267 @@ const { getRouter } = require('stremio-addon-sdk');
 const addonInterface = require('./addon');
 const proxyRoute = require('./routes/subtitle-proxy');
 const logger = require('./utils/logger');
+const { translateBatch } = require('./utils/translation');
+const { srtToVtt, decodeSrt } = require('./utils/converter');
+const { extractSrt, isArchive } = require('./utils/zip');
+const { http } = require('./utils/http');
+const { validateUrl } = require('./utils/url-validator');
+const { LRUCache } = require('lru-cache');
 
-// --- Request-scoped storage (replaces process.env mutation) ---
+// =========================================================================
+//  Optional Sentry integration
+// =========================================================================
+if (process.env.SENTRY_DSN) {
+  try {
+    const Sentry = require('@sentry/node');
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || 'production',
+      tracesSampleRate: 0.1,
+      profilesSampleRate: 0.1,
+    });
+    logger.info('system', 'Sentry initialized');
+  } catch (e) {
+    logger.warn('system', `Sentry init failed (install @sentry/node): ${e.message}`);
+  }
+}
+
+// =========================================================================
+//  Optional Redis caching
+// =========================================================================
+let redis = null;
+let redisConnected = false;
+
+if (process.env.REDIS_URL) {
+  try {
+    const Redis = require('ioredis');
+    redis = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: 3,
+      retryStrategy(times) {
+        return Math.min(times * 100, 3000);
+      },
+      lazyConnect: true,
+    });
+
+    redis.on('connect', () => {
+      redisConnected = true;
+      logger.info('system', 'Redis connected');
+    });
+
+    redis.on('error', (err) => {
+      redisConnected = false;
+      logger.warn('system', `Redis error: ${err.message}`);
+    });
+
+    redis.on('close', () => {
+      redisConnected = false;
+      logger.warn('system', 'Redis connection closed');
+    });
+
+    redis.connect().catch(() => {
+      logger.warn('system', 'Redis connection failed, falling back to in-memory cache');
+    });
+  } catch (e) {
+    logger.warn('system', `Redis module not available: ${e.message}`);
+    redis = null;
+  }
+}
+
+// =========================================================================
+//  In-memory LRU cache (fallback when Redis is unavailable)
+// =========================================================================
+const memoryCache = new LRUCache({
+  max: 500,
+  maxSize: 50 * 1024 * 1024, // 50MB total cache size
+  sizeCalculation: (value) => typeof value === 'string' ? Buffer.byteLength(value, 'utf8') : 0,
+  ttl: 1000 * 60 * 60 * 24, // 24 hours
+});
+
+/**
+ * Unified cache: get a value by key.
+ * Tries Redis first (if connected), falls back to in-memory LRU.
+ */
+async function cacheGet(key) {
+  if (redisConnected && redis) {
+    try {
+      const val = await redis.get(key);
+      return val || null;
+    } catch (e) {
+      logger.warn('cache', `Redis GET failed: ${e.message}`);
+    }
+  }
+  return memoryCache.get(key) || null;
+}
+
+/**
+ * Unified cache: set a value by key with TTL (seconds).
+ */
+async function cacheSet(key, value, ttlSeconds) {
+  if (redisConnected && redis) {
+    try {
+      await redis.set(key, value, 'EX', ttlSeconds || 86400);
+      return;
+    } catch (e) {
+      logger.warn('cache', `Redis SET failed: ${e.message}`);
+    }
+  }
+  memoryCache.set(key, value);
+}
+
+/**
+ * Unified cache: delete a key.
+ */
+async function cacheDel(key) {
+  if (redisConnected && redis) {
+    try {
+      await redis.del(key);
+      return;
+    } catch (e) {
+      logger.warn('cache', `Redis DEL failed: ${e.message}`);
+    }
+  }
+  memoryCache.delete(key);
+}
+
+/**
+ * Unified cache: clear all entries.
+ */
+async function cacheClear() {
+  if (redisConnected && redis) {
+    try {
+      await redis.flushdb();
+      logger.info('cache', 'Redis cache flushed');
+    } catch (e) {
+      logger.warn('cache', `Redis flushdb failed: ${e.message}`);
+    }
+  }
+  memoryCache.clear();
+  logger.info('cache', 'In-memory cache cleared');
+}
+
+/**
+ * Get cache stats for health reporting.
+ */
+function getCacheStats() {
+  const memStats = {
+    size: memoryCache.size,
+    max: memoryCache.max,
+    calculatedSize: memoryCache.calculatedSize || 0,
+    maxCalculatedSize: memoryCache.maxSize,
+    backend: redisConnected ? 'redis' : 'memory',
+  };
+  return memStats;
+}
+
+// =========================================================================
+//  Analytics buffer
+// =========================================================================
+const MAX_ANALYTICS_BUFFER = 1000;
+const analyticsBuffer = [];
+let analyticsFlushTimer = null;
+
+const ANALYTICS_URL = process.env.ANALYTICS_URL || '';
+
+/**
+ * Record an anonymous analytics event.
+ */
+function recordAnalyticsEvent(event, data) {
+  analyticsBuffer.push({
+    event,
+    data,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Trim if over capacity
+  if (analyticsBuffer.length > MAX_ANALYTICS_BUFFER) {
+    analyticsBuffer.splice(0, analyticsBuffer.length - MAX_ANALYTICS_BUFFER);
+  }
+
+  // Flush periodically
+  if (!analyticsFlushTimer) {
+    analyticsFlushTimer = setTimeout(flushAnalytics, 30000);
+    analyticsFlushTimer.unref();
+  }
+}
+
+/**
+ * Flush analytics buffer to log and optionally to remote URL.
+ */
+async function flushAnalytics() {
+  analyticsFlushTimer = null;
+  if (analyticsBuffer.length === 0) return;
+
+  const events = analyticsBuffer.splice(0);
+  logger.info('analytics', `Flushing ${events.length} analytics events`);
+
+  if (ANALYTICS_URL) {
+    try {
+      await http.post(ANALYTICS_URL, { events }, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 5000,
+      });
+    } catch (e) {
+      logger.warn('analytics', `Failed to forward analytics: ${e.message}`);
+    }
+  }
+}
+
+// =========================================================================
+//  Per-user rate limiter (sliding window)
+// =========================================================================
+const perUserRateLimiters = new Map();
+const PER_USER_MAX = parseInt(process.env.PER_USER_RATE_LIMIT, 10) || 60; // req/min
+const PER_USER_WINDOW_MS = 60000;
+
+// Clean up stale entries every 5 minutes
+const cleanupTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of perUserRateLimiters) {
+    if (now - entry.lastReset > PER_USER_WINDOW_MS * 2) {
+      perUserRateLimiters.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+cleanupTimer.unref();
+
+/**
+ * Check and update per-user rate limit.
+ * Returns true if allowed, false if rate limited.
+ */
+function checkPerUserRateLimit(userKey) {
+  const now = Date.now();
+  let entry = perUserRateLimiters.get(userKey);
+
+  if (!entry || now - entry.lastReset > PER_USER_WINDOW_MS) {
+    entry = { count: 0, lastReset: now };
+    perUserRateLimiters.set(userKey, entry);
+  }
+
+  entry.count++;
+  return entry.count <= PER_USER_MAX;
+}
+
+// =========================================================================
+//  Active config tracking
+// =========================================================================
+const activeConfigs = new Map();
+
+function trackConfig(configSegment) {
+  if (!configSegment) return;
+  activeConfigs.set(configSegment, Date.now());
+  // Trim to keep max 10000 entries
+  if (activeConfigs.size > 10000) {
+    const sorted = [...activeConfigs.entries()].sort((a, b) => a[1] - b[1]);
+    const toRemove = sorted.slice(0, sorted.length - 10000);
+    for (const [key] of toRemove) {
+      activeConfigs.delete(key);
+    }
+  }
+}
+
+// =========================================================================
+//  Request-scoped storage (replaces process.env mutation)
+// =========================================================================
 const asyncLocalStorage = new AsyncLocalStorage();
 
 /**
@@ -23,7 +282,9 @@ function generateNonce() {
   return crypto.randomBytes(16).toString('base64');
 }
 
-// --- Allowed config keys whitelist ---
+// =========================================================================
+//  Allowed config keys whitelist
+// =========================================================================
 const ALLOWED_CONFIG_KEYS = new Set([
   'opensubtitles_api_key',
   'subdl_api_key',
@@ -31,12 +292,17 @@ const ALLOWED_CONFIG_KEYS = new Set([
   'languages',
   'enabled_sources',
   'addon_host',
+  'addic7ed_username',
+  'addic7ed_password',
+  'hi_filter',
+  'release_matching',
+  'mt_fallback',
+  'provider_priority',
+  'profile_name',
 ]);
 
 /**
  * Sanitize config object: keep only whitelisted keys, strip everything else.
- * @param {object} configObj
- * @returns {object}
  */
 function sanitizeConfig(configObj) {
   const sanitized = {};
@@ -48,8 +314,12 @@ function sanitizeConfig(configObj) {
   return sanitized;
 }
 
+// =========================================================================
+//  Express app setup
+// =========================================================================
 const app = express();
 app.set('trust proxy', 1); // Trust 1 proxy layer (Vercel edge)
+const START_TIME = Date.now();
 
 // --- Security headers via helmet ---
 app.use(helmet({
@@ -57,7 +327,6 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", (req, res) => {
-        // Generate and attach a nonce for inline scripts in configure.html
         const nonce = generateNonce();
         res.locals.cspNonce = nonce;
         return `'nonce-${nonce}'`;
@@ -65,7 +334,15 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https://raw.githubusercontent.com"],
-      connectSrc: ["'self'", "https://api.opensubtitles.com", "https://api.subdl.com", "https://api.subsource.net", "https://v3-cinemeta.strem.io", "https://dl.subdl.com", "https://www.opensubtitles.com"],
+      connectSrc: [
+        "'self'",
+        "https://api.opensubtitles.com",
+        "https://api.subdl.com",
+        "https://api.subsource.net",
+        "https://v3-cinemeta.strem.io",
+        "https://dl.subdl.com",
+        "https://www.opensubtitles.com",
+      ],
       formAction: ["'self'"],
     },
   },
@@ -73,10 +350,9 @@ app.use(helmet({
 
 // --- Body size limit ---
 app.use(express.json({ limit: '100kb' }));
-
 app.use(cors());
 
-// --- Request ID via AsyncLocalStorage (replaces process.env mutation) ---
+// --- Request ID via AsyncLocalStorage ---
 app.use((req, res, next) => {
   const requestId = req.headers['x-vercel-id'] ||
     req.headers['x-request-id'] ||
@@ -87,7 +363,6 @@ app.use((req, res, next) => {
   });
 });
 
-// Expose a helper so the logger can read request-scoped data
 app.set('asyncLocalStorage', asyncLocalStorage);
 
 // --- Global rate limiting ---
@@ -103,33 +378,160 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// --- Health check endpoint ---
+// =========================================================================
+//  Enhanced health check endpoint
+// =========================================================================
 app.get('/health', (req, res) => {
+  const uptime = Math.round((Date.now() - START_TIME) / 1000);
+  const cacheStats = getCacheStats();
+  let failoverState = {};
+  try {
+    const handler = require('./handlers/subtitles');
+    if (handler.getFailoverState) failoverState = handler.getFailoverState();
+  } catch (e) {
+    // ignore
+  }
+
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     version: require('./manifest').version,
+    uptime,
+    cache: cacheStats,
+    redis: {
+      connected: redisConnected,
+      url: process.env.REDIS_URL ? 'configured' : 'not configured',
+    },
+    failover: failoverState,
+    analytics: {
+      bufferSize: analyticsBuffer.length,
+      remoteUrl: ANALYTICS_URL ? 'configured' : 'not configured',
+    },
+    activeConfigs: activeConfigs.size,
+    sentry: process.env.SENTRY_DSN ? 'configured' : 'not configured',
+    mt: process.env.MT_SERVICE_URL ? 'configured' : 'not configured',
   });
 });
 
-// --- Serve configure page (with CSP nonce injection for inline scripts) ---
+// =========================================================================
+//  Cache management endpoints
+// =========================================================================
+
+app.get('/cache/stats', (req, res) => {
+  res.json(getCacheStats());
+});
+
+app.post('/cache/clear', async (req, res) => {
+  await cacheClear();
+  res.json({ status: 'ok', message: 'Cache cleared' });
+});
+
+// =========================================================================
+//  Analytics endpoint
+// =========================================================================
+
+app.post('/analytics/event', (req, res) => {
+  const { event, data } = req.body || {};
+  if (!event || typeof event !== 'string') {
+    return res.status(400).json({ error: 'Missing or invalid "event" field' });
+  }
+  if (!['subtitle_served', 'addon_installed', 'provider_failed', 'config_created'].includes(event)) {
+    return res.status(400).json({ error: 'Unknown event type' });
+  }
+
+  recordAnalyticsEvent(event, data || {});
+  res.json({ status: 'ok' });
+});
+
+// =========================================================================
+//  Short URL endpoint
+// =========================================================================
+
+app.post('/api/shorten', async (req, res) => {
+  const { url } = req.body || {};
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'Missing or invalid "url" field' });
+  }
+
+  const SHORT_URL_SERVICE = process.env.SHORT_URL_SERVICE;
+  if (SHORT_URL_SERVICE) {
+    try {
+      const response = await http.post(SHORT_URL_SERVICE, { url }, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 5000,
+      });
+      if (response?.data?.short) {
+        return res.json({ short: response.data.short });
+      }
+    } catch (e) {
+      logger.warn('shorten', `Short URL service failed: ${e.message}`);
+    }
+  }
+
+  // Passthrough mode: return original URL
+  res.json({ short: url });
+});
+
+// =========================================================================
+//  Presets endpoint
+// =========================================================================
+
+app.get('/api/presets', (req, res) => {
+  const presetsPath = path.join(__dirname, 'presets.json');
+  try {
+    if (fs.existsSync(presetsPath)) {
+      const presets = JSON.parse(fs.readFileSync(presetsPath, 'utf8'));
+      res.json(presets);
+    } else {
+      res.json([]);
+    }
+  } catch (e) {
+    logger.warn('presets', `Failed to load presets: ${e.message}`);
+    res.json([]);
+  }
+});
+
+// =========================================================================
+//  i18n endpoint
+// =========================================================================
+
+app.get('/api/i18n/:lang', (req, res) => {
+  const lang = req.params.lang.replace(/[^a-zA-Z0-9_-]/g, '');
+  const i18nPath = path.join(__dirname, 'i18n', `${lang}.json`);
+
+  try {
+    if (fs.existsSync(i18nPath)) {
+      const translations = JSON.parse(fs.readFileSync(i18nPath, 'utf8'));
+      res.json(translations);
+    } else {
+      // Fallback to English
+      const enPath = path.join(__dirname, 'i18n', 'en.json');
+      if (fs.existsSync(enPath)) {
+        res.json(JSON.parse(fs.readFileSync(enPath, 'utf8')));
+      } else {
+        res.json({});
+      }
+    }
+  } catch (e) {
+    logger.warn('i18n', `Failed to load translations for ${lang}: ${e.message}`);
+    res.json({});
+  }
+});
+
+// =========================================================================
+//  Serve configure page (with CSP nonce injection for inline scripts)
+// =========================================================================
+
 const configureHtml = fs.readFileSync(path.join(__dirname, '../public/configure.html'), 'utf8');
 
 /**
  * Send the configure.html page, optionally with pre-fill configuration data.
- * When prefillConfig is provided, injects it as window.__INITIAL_CONFIG__ so the
- * frontend can restore form values (used when user returns via the Gear icon).
- *
- * @param {object} req
- * @param {object} res
- * @param {object|null} prefillConfig - decoded config object to pre-fill, or null
  */
 function sendConfigurePage(req, res, prefillConfig) {
   const nonce = res.locals.cspNonce || generateNonce();
   res.locals.cspNonce = nonce;
   let html = configureHtml.replace(/\{\{CSP_NONCE\}\}/g, nonce);
 
-  // Inject initial config for pre-fill (escape to prevent XSS in inline script)
   if (prefillConfig) {
     const configJson = JSON.stringify(prefillConfig)
       .replace(/&/g, '\\u0026')
@@ -144,9 +546,8 @@ function sendConfigurePage(req, res, prefillConfig) {
   res.send(html);
 }
 
-// --- Base configure page routes (no config segment) ---
+// --- Base configure page routes ---
 app.get('/', (req, res) => {
-  // Support pre-fill via ?config=BASE64 query parameter as fallback
   let prefillConfig = null;
   if (req.query.config) {
     prefillConfig = decodeConfigFromBase64(req.query.config);
@@ -155,7 +556,6 @@ app.get('/', (req, res) => {
 });
 
 app.get('/configure', (req, res) => {
-  // Support pre-fill via ?config=BASE64 query parameter as fallback
   let prefillConfig = null;
   if (req.query.config) {
     prefillConfig = decodeConfigFromBase64(req.query.config);
@@ -168,7 +568,10 @@ app.get('/logo.png', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/logo.png'));
 });
 
-// --- Stricter rate limit for subtitle proxy ---
+// =========================================================================
+//  Subtitle proxy route (with stricter rate limiting)
+// =========================================================================
+
 const proxyLimiter = rateLimit({
   windowMs: 60000,
   max: 30,
@@ -180,23 +583,188 @@ const proxyLimiter = rateLimit({
   }
 });
 
-// Subtitle proxy route (with stricter rate limiting)
 app.get('/subtitle/:provider/:subtitleId.:ext', proxyLimiter, proxyRoute);
 
+// =========================================================================
+//  Translation proxy route
+// =========================================================================
+
+app.get('/subtitle/translate/:payload.:ext', proxyLimiter, async (req, res) => {
+  const { payload, ext } = req.params;
+  const configBase64 = req.query.config;
+  const isSrt = ext === 'srt';
+
+  if (ext !== 'srt' && ext !== 'vtt') {
+    return res.status(400).send('Invalid file extension. Use .srt or .vtt');
+  }
+
+  try {
+    // Decode the MT payload
+    let mtPayload;
+    try {
+      mtPayload = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    } catch (e) {
+      return res.status(400).send('Invalid payload.');
+    }
+
+    const { provider, subtitleId, targetLangs, sourceLang } = mtPayload;
+    if (!provider || !subtitleId || !targetLangs) {
+      return res.status(400).send('Incomplete payload.');
+    }
+
+    const cacheKey = `translate:${ext}:${payload}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) {
+      res.setHeader('Content-Type', isSrt ? 'text/plain; charset=utf-8' : 'text/vtt; charset=utf-8');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Content-Length', Buffer.byteLength(cached, 'utf8'));
+      res.setHeader('X-Cache', 'HIT');
+      return res.send(cached);
+    }
+
+    // Decode config for API keys
+    let config = {};
+    if (configBase64) {
+      try {
+        config = JSON.parse(Buffer.from(configBase64, 'base64url').toString('utf8'));
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // Fetch the original subtitle content
+    // Reuse the existing proxy logic by constructing a mock req/res
+    let originalContent = '';
+    try {
+      // Fetch subtitle directly using provider-specific download logic
+      let subBuffer;
+      const decodedSubId = JSON.parse(Buffer.from(subtitleId, 'base64url').toString('utf8'));
+
+      if (provider === 'opensubtitles') {
+        const apiKey = config.opensubtitles_api_key || process.env.OPENSUBTITLES_API_KEY;
+        if (!apiKey) return res.status(502).send('OpenSubtitles API key not configured.');
+
+        const dlRes = await http.post('https://api.opensubtitles.com/api/v1/download',
+          { file_id: parseInt(decodedSubId.id, 10) },
+          { headers: { 'Api-Key': apiKey, 'User-Agent': 'SubtitleHub/1.3.0', 'Accept': 'application/json' } }
+        );
+        if (!dlRes?.data?.link) return res.status(502).send('OpenSubtitles download failed.');
+        const urlCheck = await validateUrl(dlRes.data.link);
+        if (!urlCheck.valid) return res.status(502).send('Invalid download URL.');
+        const fileRes = await http.get(dlRes.data.link, { responseType: 'arraybuffer' });
+        subBuffer = Buffer.from(fileRes.data);
+      } else if (provider === 'subdl') {
+        const dlUrl = decodedSubId.url.startsWith('http')
+          ? decodedSubId.url
+          : `https://dl.subdl.com${decodedSubId.url.startsWith('/') ? '' : '/'}${decodedSubId.url}`;
+        const urlCheck = await validateUrl(dlUrl);
+        if (!urlCheck.valid) return res.status(403).send('Blocked: URL not in allowed domains.');
+        const fileRes = await http.get(encodeURI(dlUrl), { responseType: 'arraybuffer' });
+        subBuffer = Buffer.from(fileRes.data);
+        if (isArchive(subBuffer)) subBuffer = await extractSrt(subBuffer, sourceLang);
+      } else if (provider === 'subsource') {
+        const apiKey = config.subsource_api_key || process.env.SUBSOURCE_API_KEY;
+        const dlRes = await http.post('https://api.subsource.net/api/downloadSub',
+          { movie: decodedSubId.slug, lang: decodedSubId.lang, id: decodedSubId.id },
+          { headers: { ...(apiKey && { 'apiKey': apiKey }) } }
+        );
+        if (!dlRes?.data?.subUrl) return res.status(502).send('SubSource download failed.');
+        const urlCheck = await validateUrl(dlRes.data.subUrl);
+        if (!urlCheck.valid) return res.status(502).send('Invalid download URL.');
+        const fileRes = await http.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
+        subBuffer = Buffer.from(fileRes.data);
+        if (isArchive(subBuffer)) subBuffer = await extractSrt(subBuffer, sourceLang);
+      } else {
+        return res.status(400).send('Unknown provider for translation.');
+      }
+
+      if (!subBuffer || subBuffer.length === 0) return res.status(502).send('Empty subtitle file.');
+      originalContent = decodeSrt(subBuffer, sourceLang);
+    } catch (e) {
+      logger.error('translate', `Failed to fetch original subtitle: ${e.message}`);
+      return res.status(502).send('Failed to fetch original subtitle.');
+    }
+
+    // Parse SRT content and translate lines
+    const targetLang = targetLangs.split(',')[0] || 'eng';
+    const srtLines = originalContent.split('\n');
+    const textLines = [];
+    const lineIndices = []; // Track which lines are subtitle text (not numbers/timestamps)
+
+    for (let i = 0; i < srtLines.length; i++) {
+      const trimmed = srtLines[i].trim();
+      // Detect subtitle text lines (not index numbers or timestamps)
+      if (trimmed && !/^\d+$/.test(trimmed) && !/^\d{2}:\d{2}/.test(trimmed) && trimmed !== '') {
+        textLines.push(trimmed);
+        lineIndices.push(i);
+      }
+    }
+
+    // Translate the text lines in batch
+    const translatedLines = await translateBatch(textLines, sourceLang, targetLang);
+
+    // Rebuild SRT with translated lines
+    for (let j = 0; j < lineIndices.length; j++) {
+      if (j < translatedLines.length) {
+        srtLines[lineIndices[j]] = translatedLines[j];
+      }
+    }
+
+    const translatedSrt = srtLines.join('\n');
+    const finalContent = isSrt ? translatedSrt : srtToVtt(Buffer.from(translatedSrt, 'utf8'), sourceLang);
+
+    await cacheSet(cacheKey, finalContent, 86400);
+    recordAnalyticsEvent('subtitle_served', { provider: 'machine-translation', targetLang });
+
+    res.setHeader('Content-Type', isSrt ? 'text/plain; charset=utf-8' : 'text/vtt; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Length', Buffer.byteLength(finalContent, 'utf8'));
+    res.setHeader('X-Cache', 'MISS');
+    res.send(finalContent);
+  } catch (error) {
+    const msg = error.message || '';
+    logger.error('translate', `Translation proxy failed: ${msg}`);
+    res.status(500).send('Translation failed.');
+  }
+});
+
+// =========================================================================
+//  Prefetch route
+// =========================================================================
+
+app.get('/prefetch/:type/:id', async (req, res) => {
+  const { type, id } = req.params;
+  const config = req.userConfig || {};
+
+  try {
+    const subtitlesHandler = require('./handlers/subtitles');
+    await subtitlesHandler({
+      type,
+      id,
+      config,
+      extra: { prefetch: true },
+    });
+    res.json({ status: 'ok', cached: true });
+  } catch (e) {
+    logger.error('prefetch', `Prefetch failed: ${e.message}`);
+    res.json({ status: 'ok', cached: false, error: e.message });
+  }
+});
+
+// =========================================================================
+//  Config middleware
+// =========================================================================
+
 // --- Paths handled by our custom routes (not forwarded to addonRouter) ---
-const CUSTOM_PATHS = new Set(['manifest.json', 'configure', 'logo.png']);
+const CUSTOM_PATHS = new Set([
+  'manifest.json', 'configure', 'logo.png',
+  'health', 'cache/stats', 'cache/clear',
+  'analytics/event', 'api/shorten', 'api/presets',
+]);
 
 /**
  * Config middleware: decodes base64url-encoded config from URL path segment.
  * Applies whitelist validation to prevent config key injection.
- *
- * For custom-handled paths (manifest.json, configure, logo.png), the decoded
- * config is attached to req.userConfig WITHOUT rewriting req.url, so our custom
- * route handlers can access it directly.
- *
- * For all other paths (addon API routes like subtitles, catalog, stream), the
- * URL is rewritten to the stremio-addon-sdk format:
- *   /{encodedConfigJSON}/manifest.json  →  /{percentEncodedJSON}/manifest.json
  */
 app.use((req, res, next) => {
   const match = req.url.match(/^\/([a-zA-Z0-9-_]+)\/(.*)$/);
@@ -208,7 +776,6 @@ app.use((req, res, next) => {
 
       let configObj = JSON.parse(decoded);
 
-      // Reject arrays and non-objects
       if (Array.isArray(configObj) || typeof configObj !== 'object' || configObj === null) {
         throw new Error("Invalid config object: expected a JSON object");
       }
@@ -221,7 +788,7 @@ app.use((req, res, next) => {
         throw new Error("Invalid host header");
       }
 
-      // Whitelist config keys — strip any unknown keys
+      // Whitelist config keys
       configObj = sanitizeConfig(configObj);
       configObj.addon_host = sanitizedHost;
 
@@ -229,13 +796,22 @@ app.use((req, res, next) => {
       req.userConfig = configObj;
       req.configSegment = match[1];
 
+      // Track active config
+      trackConfig(match[1]);
+
+      // Per-user rate limiting
+      const userKey = crypto.createHash('sha256').update(match[1]).digest('hex');
+      if (!checkPerUserRateLimit(userKey)) {
+        logger.warn('system', 'Per-user rate limit exceeded', { ip: req.ip });
+        return res.status(429).json({ error: 'Per-user rate limit exceeded.' });
+      }
+
       // Only rewrite URL for addon API routes (not our custom-handled paths)
-      const subPath = match[2].split('?')[0]; // Strip query string for comparison
-      if (!CUSTOM_PATHS.has(subPath)) {
+      const subPath = match[2].split('?')[0];
+      if (!CUSTOM_PATHS.has(subPath) && !subPath.startsWith('api/') && !subPath.startsWith('subtitle/')) {
         req.url = `/${encodeURIComponent(JSON.stringify(configObj))}/${match[2]}`;
       }
     } catch (e) {
-      // Log parse/validation errors for debugging
       if (e.message && !e.message.includes('Invalid config') && !e.message.includes('Invalid host')) {
         logger.warn('system', `Config decode failed: ${e.message}`);
       }
@@ -245,10 +821,10 @@ app.use((req, res, next) => {
   next();
 });
 
-/**
- * Sanitize the Host header to prevent injection attacks.
- * Only allows valid hostnames (domain names, IPs, host:port).
- */
+// =========================================================================
+//  Host sanitization
+// =========================================================================
+
 function sanitizeHost(host) {
   if (!host || typeof host !== 'string') return null;
   const trimmed = host.trim();
@@ -269,11 +845,10 @@ function sanitizeHost(host) {
   return trimmed;
 }
 
-/**
- * Decode a base64url-encoded config string into a JSON object.
- * Used for ?config= query parameter pre-fill on base routes.
- * Returns null on failure.
- */
+// =========================================================================
+//  Config decode helper
+// =========================================================================
+
 function decodeConfigFromBase64(b64) {
   try {
     let normalized = b64.replace(/-/g, '+').replace(/_/g, '/');
@@ -293,23 +868,13 @@ function decodeConfigFromBase64(b64) {
 //  Custom Manifest & Configure Routes (must be BEFORE addonRouter)
 // =========================================================================
 
-/**
- * Dynamic manifest with configurationURL injection.
- *
- * When installed with config (e.g., https://domain.com/BASE64/manifest.json),
- * the configurationURL is set to https://domain.com/BASE64/configure so that
- * the Stremio Gear icon opens the configure page WITH the user's current
- * settings pre-filled.
- */
 app.get('/:segment/manifest.json', (req, res) => {
   const manifest = { ...require('./manifest') };
   const protocol = req.protocol;
   const host = req.headers.host;
 
-  // Build configurationURL pointing to the configure page with the same config segment
   if (req.userConfig) {
     manifest.behaviorHints.configurationURL = `${protocol}://${host}/${req.configSegment}/configure`;
-    // Config is present in the URL — allow installation, no longer require configuration
     manifest.behaviorHints.configurationRequired = false;
   } else {
     manifest.behaviorHints.configurationURL = `${protocol}://${host}/configure`;
@@ -319,25 +884,14 @@ app.get('/:segment/manifest.json', (req, res) => {
   res.json(manifest);
 });
 
-/**
- * Pre-filled configure page — opened when user clicks the Gear icon.
- * The config middleware decodes the base64 segment and attaches it to
- * req.userConfig, which is then injected into the HTML for form pre-fill.
- */
 app.get('/:segment/configure', (req, res) => {
   sendConfigurePage(req, res, req.userConfig || null);
 });
 
-/**
- * Logo served from config-prefixed URL (same logo, different path).
- */
 app.get('/:segment/logo.png', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/logo.png'));
 });
 
-/**
- * Base manifest.json (no config segment) — also gets configurationURL.
- */
 app.get('/manifest.json', (req, res) => {
   const manifest = { ...require('./manifest') };
   const protocol = req.protocol;
@@ -347,9 +901,16 @@ app.get('/manifest.json', (req, res) => {
   res.json(manifest);
 });
 
-// --- Stremio addon SDK router (handles /subtitles, /catalog, /stream, etc.) ---
+// =========================================================================
+//  Stremio addon SDK router
+// =========================================================================
+
 const addonRouter = getRouter(addonInterface);
 app.use('/', addonRouter);
+
+// =========================================================================
+//  Start server
+// =========================================================================
 
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 7000;

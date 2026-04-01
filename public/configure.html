@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,8 @@
     :root {
       --primary: #8b5cf6;
       --primary-hover: #7c3aed;
+      --primary-light: rgba(139, 92, 246, 0.15);
+      --primary-border: rgba(139, 92, 246, 0.3);
       --bg-dark: #0f172a;
       --card-bg: rgba(30, 41, 59, 0.7);
       --border: rgba(255, 255, 255, 0.1);
@@ -18,12 +20,19 @@
       --warning-bg: rgba(245, 158, 11, 0.1);
       --warning-border: rgba(245, 158, 11, 0.3);
       --warning-text: #fbbf24;
+      --success-bg: rgba(34, 197, 94, 0.12);
+      --success-border: rgba(34, 197, 94, 0.3);
+      --success-text: #4ade80;
+      --error-bg: rgba(239, 68, 68, 0.12);
+      --error-border: rgba(239, 68, 68, 0.3);
+      --error-text: #f87171;
+      --wizard-transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       font-family: 'Inter', sans-serif;
-      margin: 0;
       min-height: 100vh;
       background-color: var(--bg-dark);
       background-image:
@@ -32,9 +41,11 @@
       color: var(--text-main);
       display: flex;
       justify-content: center;
-      align-items: center;
-      padding: 20px;
+      align-items: flex-start;
+      padding: 24px 16px 48px;
     }
+
+    [dir="rtl"] body { direction: rtl; text-align: right; }
 
     .dashboard {
       background: var(--card-bg);
@@ -42,49 +53,144 @@
       border: 1px solid var(--border);
       border-radius: 24px;
       width: 100%;
-      max-width: 650px;
+      max-width: 680px;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
       overflow: hidden;
     }
 
+    /* ========== HEADER ========== */
     .header {
-      padding: 32px;
+      padding: 28px 32px 20px;
       text-align: center;
       border-bottom: 1px solid var(--border);
     }
-
     .header-icon {
-      width: 56px;
-      height: 56px;
+      width: 52px; height: 52px;
       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
       border-radius: 14px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
+    h1 { font-size: 22px; font-weight: 700; }
+    .subtitle { color: var(--text-muted); font-size: 13px; margin-top: 3px; }
 
-    h1 { margin: 0; font-size: 24px; font-weight: 700; }
-    .subtitle { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+    /* ========== PROGRESS STEPS ========== */
+    .progress-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      gap: 0;
+    }
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      cursor: pointer;
+      user-select: none;
+    }
+    .progress-step:not(:last-child) { flex: 1; }
+    .step-circle {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      border: 2px solid var(--border);
+      color: var(--text-muted);
+      background: transparent;
+      transition: all 0.3s;
+      flex-shrink: 0;
+    }
+    .progress-step.active .step-circle {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+    .progress-step.completed .step-circle {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+    .step-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: 8px;
+      white-space: nowrap;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+    [dir="rtl"] .step-label { margin-left: 0; margin-right: 8px; }
+    .progress-step.active .step-label,
+    .progress-step.completed .step-label { color: var(--text-main); }
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      margin: 0 10px;
+      border-radius: 1px;
+      transition: background 0.3s;
+    }
+    .step-line.filled { background: var(--primary); }
 
-    .content { padding: 32px; }
+    /* ========== STEP CONTENT ========== */
+    .wizard-content {
+      position: relative;
+      min-height: 320px;
+      overflow: hidden;
+    }
+    .step-panel {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: 28px 32px;
+      opacity: 0;
+      transform: translateX(40px);
+      transition: opacity var(--wizard-transition), transform var(--wizard-transition);
+      pointer-events: none;
+      visibility: hidden;
+    }
+    [dir="rtl"] .step-panel { transform: translateX(-40px); }
+    .step-panel.active {
+      position: relative;
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+      visibility: visible;
+    }
+    .step-panel.exit-left {
+      opacity: 0;
+      transform: translateX(-40px);
+    }
+    [dir="rtl"] .step-panel.exit-left { transform: translateX(40px); }
+
     .section-label {
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--primary);
       font-weight: 700;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       display: block;
     }
+    .section-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
 
-    /* Editing Mode Banner */
+    /* ========== EDITING BANNER ========== */
     .editing-banner {
       background: rgba(139, 92, 246, 0.12);
-      border: 1px solid rgba(139, 92, 246, 0.3);
+      border: 1px solid var(--primary-border);
       border-radius: 12px;
       padding: 14px 16px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       font-size: 13px;
       line-height: 1.5;
       color: #c4b5fd;
@@ -98,17 +204,16 @@
       font-size: 14px;
       color: #ddd6fe;
     }
-    .editing-banner svg {
-      flex-shrink: 0;
-    }
+    [dir="rtl"] .editing-banner strong { flex-direction: row-reverse; }
+    .editing-banner svg { flex-shrink: 0; }
 
-    /* Security Warning Banner */
+    /* ========== SECURITY WARNING ========== */
     .security-warning {
       background: var(--warning-bg);
       border: 1px solid var(--warning-border);
       border-radius: 12px;
       padding: 14px 16px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       font-size: 12px;
       line-height: 1.6;
       color: var(--warning-text);
@@ -119,45 +224,147 @@
       font-size: 13px;
     }
 
+    /* ========== TOGGLE SWITCH ========== */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-info { flex: 1; }
+    .toggle-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .toggle-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+      margin-left: 14px;
+    }
+    [dir="rtl"] .switch { margin-left: 0; margin-right: 14px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334155;
+      transition: .3s;
+      border-radius: 22px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px; width: 16px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(18px); }
+
+    /* ========== LANGUAGE SELECTOR DROPDOWN ========== */
+    .lang-select-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .lang-select-row label {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .lang-select-row select {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text-main);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 30px;
+    }
+    .lang-select-row select:focus { outline: none; border-color: var(--primary); }
+
+    /* ========== PRESETS GRID ========== */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .preset-card {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .preset-card:hover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      transform: translateY(-1px);
+    }
+    .preset-icon { font-size: 24px; margin-bottom: 6px; display: block; }
+    .preset-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+    .preset-desc { font-size: 11px; color: var(--text-muted); line-height: 1.3; }
+
+    /* ========== PROVIDER CARDS ========== */
     .provider-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 32px;
+      gap: 14px;
+      margin-bottom: 24px;
     }
-
     .provider-card {
       background: var(--input-bg);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px;
+      border-radius: 14px;
+      padding: 14px;
       transition: all 0.2s;
     }
-
     .provider-card:focus-within { border-color: var(--primary); }
-
+    .provider-card.disabled-card { opacity: 0.5; }
     .provider-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
-
     .provider-name {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       display: flex;
       align-items: center;
     }
 
-    /* Interactive Tooltip CSS */
+    /* Tooltip */
     .tooltip {
       position: relative;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 16px;
-      height: 16px;
+      width: 16px; height: 16px;
       background: rgba(255, 255, 255, 0.1);
       border-radius: 50%;
       font-size: 10px;
@@ -166,7 +373,7 @@
       color: var(--text-muted);
       transition: all 0.2s;
     }
-
+    [dir="rtl"] .tooltip { margin-left: 0; margin-right: 6px; }
     .tooltip .tooltiptext {
       visibility: hidden;
       width: 220px;
@@ -187,19 +394,6 @@
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
       pointer-events: auto;
     }
-
-    .tooltip::after {
-      content: "";
-      position: absolute;
-      width: 100%;
-      height: 20px;
-      bottom: 100%;
-      left: 0;
-      display: none;
-    }
-
-    .tooltip:hover::after { display: block; }
-
     .tooltiptext a {
       color: var(--primary);
       text-decoration: underline;
@@ -207,21 +401,97 @@
       margin-top: 6px;
       font-size: 11px;
     }
+    .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
 
-    .tooltip:hover .tooltiptext {
-      visibility: visible;
-      opacity: 1;
+    /* Provider credential inputs */
+    .provider-inputs { margin-top: 8px; }
+    .provider-input-group { margin-bottom: 6px; }
+    .provider-input-group:last-child { margin-bottom: 0; }
+    .provider-input-group label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 500;
     }
 
+    input[type="password"], input[type="text"], input[type="url"] {
+      width: 100%;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--border);
+      color: white;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      max-width: 100%;
+    }
+    input[type="password"]:focus, input[type="text"]:focus, input[type="url"]:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    input::placeholder { color: rgba(255,255,255,0.3); }
+
+    /* ========== PROVIDER PRIORITY DRAG LIST ========== */
+    .priority-section { margin-bottom: 16px; }
+    .priority-list { list-style: none; padding: 0; }
+    .priority-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 6px;
+      cursor: grab;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .priority-item:hover { border-color: var(--primary); background: var(--primary-light); }
+    .priority-item.dragging {
+      opacity: 0.4;
+      border-style: dashed;
+    }
+    .priority-item.drag-over {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      transform: scale(1.01);
+    }
+    .priority-handle {
+      color: var(--text-muted);
+      margin-right: 12px;
+      font-size: 16px;
+      flex-shrink: 0;
+      cursor: grab;
+    }
+    [dir="rtl"] .priority-handle { margin-right: 0; margin-left: 12px; }
+    .priority-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    [dir="rtl"] .priority-num { margin-right: 0; margin-left: 10px; }
+    .priority-name { font-size: 13px; font-weight: 600; flex: 1; }
+
+    /* ========== LANGUAGE CHIPS ========== */
     .lang-container {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      max-height: 300px;
+      max-height: 280px;
       overflow-y: auto;
       padding-right: 4px;
+      margin-bottom: 20px;
     }
-
+    [dir="rtl"] .lang-container { padding-right: 0; padding-left: 4px; }
     .lang-chip {
       padding: 6px 14px;
       border-radius: 20px;
@@ -233,94 +503,193 @@
       user-select: none;
       outline: none;
     }
-
     .lang-chip:hover { border-color: var(--primary); }
     .lang-chip:focus-visible { box-shadow: 0 0 0 2px var(--primary); }
-
     .lang-chip.active {
       background: var(--primary);
       border-color: var(--primary);
       color: white;
     }
 
-    input[type="password"], input[type="text"] {
-      width: 100%;
-      background: rgba(0,0,0,0.2);
+    /* Scrollbar styling */
+    .lang-container::-webkit-scrollbar { width: 6px; }
+    .lang-container::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+    .lang-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    /* ========== PROFILES SECTION ========== */
+    .profiles-section { margin-bottom: 20px; }
+    .profiles-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .profiles-header input[type="text"] { flex: 1; }
+    .profiles-list {
+      max-height: 180px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+    .profile-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--input-bg);
       border: 1px solid var(--border);
-      color: white;
-      padding: 10px 12px;
       border-radius: 8px;
+      margin-bottom: 6px;
+      gap: 8px;
+    }
+    .profile-item-name {
+      flex: 1;
       font-size: 13px;
-      max-width: 100%;
-    }
-
-    input[type="password"]:focus, input[type="text"]:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 34px;
-      height: 20px;
-    }
-
-    .switch input { opacity: 0; width: 0; height: 0; }
-
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #334155;
-      transition: .4s;
-      border-radius: 34px;
-    }
-
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 14px; width: 14px;
-      left: 3px; bottom: 3px;
-      background-color: white;
-      transition: .4s;
-      border-radius: 50%;
-    }
-
-    input:checked + .slider { background-color: var(--primary); }
-    input:checked + .slider:before { transform: translateX(14px); }
-
-    .footer {
-      padding: 24px 32px;
-      background: rgba(0, 0, 0, 0.2);
-      border-top: 1px solid var(--border);
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 15px;
       font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+    .profile-item-time {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+    [dir="rtl"] .profile-item-time { margin-left: 0; margin-right: 8px; }
+    .profile-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-sm {
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      width: auto;
+    }
+    .btn-primary-sm {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary-sm:hover { background: var(--primary-hover); }
+    .btn-danger-sm {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+    .btn-danger-sm:hover { background: rgba(239, 68, 68, 0.3); }
+    .btn-outline-sm {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-outline-sm:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-success-sm {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+    .btn-success-sm:hover { background: rgba(34, 197, 94, 0.3); }
 
-    button:hover { background: var(--primary-hover); }
-    button:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+    /* ========== IMPORT/EXPORT ========== */
+    .ie-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .btn-ie {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      background: var(--input-bg);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-ie:hover { border-color: var(--primary); }
+    .btn-ie-icon { font-size: 16px; }
 
+    /* ========== FEEDBACK LINKS ========== */
+    .feedback-section { margin-bottom: 12px; }
+    .feedback-links {
+      display: flex;
+      gap: 10px;
+    }
+    .feedback-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      background: var(--input-bg);
+      color: var(--text-main);
+      text-decoration: none;
+      text-align: center;
+    }
+    .feedback-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ========== FOOTER / NAVIGATION ========== */
+    .wizard-footer {
+      padding: 20px 32px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .btn-nav {
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-back {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .btn-back:hover { border-color: var(--text-muted); color: var(--text-main); }
+    .btn-next {
+      flex: 1;
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-next:hover { background: var(--primary-hover); }
+    .btn-generate {
+      flex: 1;
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-generate:hover { background: var(--primary-hover); }
+
+    /* ========== RESULT PANEL ========== */
     .result-panel {
       display: none;
-      margin-top: 20px;
+      margin-top: 16px;
       padding: 20px;
       background: rgba(139, 92, 246, 0.1);
       border: 1px solid var(--primary);
       border-radius: 12px;
     }
-
     .install-btn {
       display: block;
       text-align: center;
@@ -332,320 +701,1594 @@
       font-weight: 700;
       margin-bottom: 12px;
       transition: opacity 0.2s;
+      font-size: 14px;
     }
-
     .install-btn:hover { opacity: 0.9; }
-
+    .result-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      margin-top: 12px;
+    }
+    .result-label:first-of-type { margin-top: 0; }
+    .url-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
     .code-block {
       font-family: monospace;
       font-size: 11px;
       background: black;
-      padding: 10px;
+      padding: 10px 12px;
       border-radius: 6px;
       word-break: break-all;
       color: #a78bfa;
+      flex: 1;
+      margin: 0;
+      line-height: 1.5;
+      min-height: 38px;
+    }
+    .btn-copy {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--primary);
+      background: transparent;
+      color: var(--primary);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      white-space: nowrap;
+      flex-shrink: 0;
+      width: auto;
+    }
+    .btn-copy:hover { background: var(--primary); color: #fff; }
+    .short-url-section { margin-top: 10px; }
+
+    /* ========== TOAST NOTIFICATIONS ========== */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 8px;
+    }
+    [dir="rtl"] .toast-container { right: auto; left: 24px; }
+    .toast {
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      min-width: 260px;
+      max-width: 380px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      animation: toastIn 0.3s ease-out;
+      font-family: inherit;
+    }
+    .toast.toast-success {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success-text);
+    }
+    .toast.toast-error {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error-text);
+    }
+    .toast.toast-exit { animation: toastOut 0.3s ease-in forwards; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 0; transform: translateY(20px) scale(0.95); }
     }
 
-    /* Scrollbar styling for language picker */
-    .lang-container::-webkit-scrollbar {
-      width: 6px;
-    }
-    .lang-container::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 3px;
-    }
-    .lang-container::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 3px;
+    /* ========== HIDDEN FILE INPUT ========== */
+    .hidden-input { display: none; }
+
+    /* ========== DIVIDER ========== */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 18px 0;
     }
 
-    @media (max-width: 500px) {
-      .provider-grid {
-        grid-template-columns: 1fr;
-      }
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 540px) {
+      body { padding: 12px 8px 40px; }
+      .header { padding: 20px 20px 16px; }
+      .progress-bar { padding: 14px 16px; flex-wrap: wrap; }
+      .step-label { display: none; }
+      .step-panel { padding: 20px 18px; }
+      .wizard-footer { padding: 16px 18px 20px; flex-direction: column; }
+      .btn-back { width: 100%; text-align: center; }
+      .btn-next, .btn-generate { width: 100%; }
+      .provider-grid { grid-template-columns: 1fr; }
+      .presets-grid { grid-template-columns: 1fr; }
+      .ie-row { flex-direction: column; }
+      .feedback-links { flex-direction: column; }
+      .toast-container { left: 12px; right: 12px; bottom: 12px; }
+      .toast { min-width: auto; max-width: 100%; }
+      .lang-select-row { flex-direction: column; align-items: stretch; }
+      .lang-select-row label { margin-bottom: 4px; }
+      .profiles-header { flex-direction: column; align-items: stretch; }
     }
   </style>
 </head>
 <body>
 
   <div class="dashboard" role="main">
+    <!-- HEADER -->
     <div class="header">
       <div class="header-icon" aria-hidden="true">
-        <svg style="width:28px;height:28px;color:white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Subtitle Hub icon">
+        <svg style="width:26px;height:26px;color:white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Subtitle Hub icon">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
         </svg>
       </div>
-      <h1>Subtitle Hub</h1>
-      <p class="subtitle">Select your providers and preferred languages</p>
+      <h1 data-i18n="title">Subtitle Hub</h1>
+      <p class="subtitle" data-i18n="subtitle">Configure your subtitle addon</p>
     </div>
 
-    <div class="content">
-      <!-- Editing Mode Banner (shown when returning via Gear icon with existing config) -->
-      <div class="editing-banner" id="editingBanner" role="status">
-        <strong>
-          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          </svg>
-          Editing Existing Configuration
-        </strong>
-        Your current settings have been loaded below. Modify them and click
-        "Update Addon" to apply the changes in Stremio.
+    <!-- PROGRESS STEPS -->
+    <div class="progress-bar" role="navigation" aria-label="Wizard steps">
+      <div class="progress-step active" data-step="0" id="progStep0" tabindex="0" role="tab" aria-selected="true">
+        <div class="step-circle">1</div>
+        <span class="step-label" data-i18n="step_welcome">Welcome</span>
       </div>
-
-      <!-- Security Warning -->
-      <div class="security-warning" role="alert">
-        <strong>Security Notice</strong>
-        API keys are used securely via environment variables when configured server-side.
-        When using the URL-based config below, keys are encoded into the addon URL.
-        For maximum security, set API keys as server environment variables instead.
+      <div class="step-line" id="line01"></div>
+      <div class="progress-step" data-step="1" id="progStep1" tabindex="0" role="tab" aria-selected="false">
+        <div class="step-circle">2</div>
+        <span class="step-label" data-i18n="step_providers">Providers</span>
       </div>
-
-      <span class="section-label" id="providers-label">Providers & API Keys</span>
-      <div class="provider-grid" role="group" aria-labelledby="providers-label">
-        <div class="provider-card">
-          <div class="provider-header">
-            <span class="provider-name">OpenSubtitles
-              <span class="tooltip" role="tooltip" aria-label="OpenSubtitles API key info">
-                ?
-                <div class="tooltiptext">
-                  Register for a free account to get your API key.
-                  <a href="https://www.opensubtitles.com/en/consumers" target="_blank" rel="noopener noreferrer">Get API Key</a>
-                </div>
-              </span>
-            </span>
-            <label class="switch" aria-label="Enable OpenSubtitles">
-              <input type="checkbox" id="check_opensubtitles" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-          <input type="password" id="key_opensubtitles" placeholder="API Key (Optional)" maxlength="256" aria-label="OpenSubtitles API Key">
-        </div>
-
-        <div class="provider-card">
-          <div class="provider-header">
-            <span class="provider-name">SubDL
-              <span class="tooltip" role="tooltip" aria-label="SubDL API key info">
-                ?
-                <div class="tooltiptext">
-                  Create an account and find your key on the API page.
-                  <a href="https://subdl.com/" target="_blank" rel="noopener noreferrer">Get API Key</a>
-                </div>
-              </span>
-            </span>
-            <label class="switch" aria-label="Enable SubDL">
-              <input type="checkbox" id="check_subdl" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-          <input type="password" id="key_subdl" placeholder="API Key" maxlength="256" aria-label="SubDL API Key">
-        </div>
-
-        <div class="provider-card">
-          <div class="provider-header">
-            <span class="provider-name">SubSource
-              <span class="tooltip" role="tooltip" aria-label="SubSource API key info">
-                ?
-                <div class="tooltiptext">
-                  Register to get access to the SubSource API.
-                  <a href="https://subsource.net/" target="_blank" rel="noopener noreferrer">Get API Key</a>
-                </div>
-              </span>
-            </span>
-            <label class="switch" aria-label="Enable SubSource">
-              <input type="checkbox" id="check_subsource" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-          <input type="password" id="key_subsource" placeholder="API Key" maxlength="256" aria-label="SubSource API Key">
-        </div>
+      <div class="step-line" id="line12"></div>
+      <div class="progress-step" data-step="2" id="progStep2" tabindex="0" role="tab" aria-selected="false">
+        <div class="step-circle">3</div>
+        <span class="step-label" data-i18n="step_languages">Languages</span>
       </div>
-
-      <span class="section-label" id="languages-label">Preferred Languages</span>
-      <div class="lang-container" id="langPicker" role="group" aria-labelledby="languages-label">
-        <div class="lang-chip active" data-code="eng" role="checkbox" aria-checked="true" tabindex="0">English</div>
-        <div class="lang-chip" data-code="ron" role="checkbox" aria-checked="false" tabindex="0">Romanian</div>
-        <div class="lang-chip" data-code="fre" role="checkbox" aria-checked="false" tabindex="0">French</div>
-        <div class="lang-chip" data-code="spa" role="checkbox" aria-checked="false" tabindex="0">Spanish</div>
-        <div class="lang-chip" data-code="ger" role="checkbox" aria-checked="false" tabindex="0">German</div>
-        <div class="lang-chip" data-code="ita" role="checkbox" aria-checked="false" tabindex="0">Italian</div>
-        <div class="lang-chip" data-code="por" role="checkbox" aria-checked="false" tabindex="0">Portuguese</div>
-        <div class="lang-chip" data-code="gre" role="checkbox" aria-checked="false" tabindex="0">Greek</div>
-        <div class="lang-chip" data-code="hun" role="checkbox" aria-checked="false" tabindex="0">Hungarian</div>
-        <div class="lang-chip" data-code="ara" role="checkbox" aria-checked="false" tabindex="0">Arabic</div>
-        <div class="lang-chip" data-code="jpn" role="checkbox" aria-checked="false" tabindex="0">Japanese</div>
-        <div class="lang-chip" data-code="kor" role="checkbox" aria-checked="false" tabindex="0">Korean</div>
-        <div class="lang-chip" data-code="chi" role="checkbox" aria-checked="false" tabindex="0">Chinese</div>
-        <div class="lang-chip" data-code="tur" role="checkbox" aria-checked="false" tabindex="0">Turkish</div>
-        <div class="lang-chip" data-code="dut" role="checkbox" aria-checked="false" tabindex="0">Dutch</div>
-        <div class="lang-chip" data-code="swe" role="checkbox" aria-checked="false" tabindex="0">Swedish</div>
-        <div class="lang-chip" data-code="hin" role="checkbox" aria-checked="false" tabindex="0">Hindi</div>
-        <div class="lang-chip" data-code="tha" role="checkbox" aria-checked="false" tabindex="0">Thai</div>
-        <div class="lang-chip" data-code="cze" role="checkbox" aria-checked="false" tabindex="0">Czech</div>
-        <div class="lang-chip" data-code="pol" role="checkbox" aria-checked="false" tabindex="0">Polish</div>
-        <div class="lang-chip" data-code="hrv" role="checkbox" aria-checked="false" tabindex="0">Croatian</div>
-        <div class="lang-chip" data-code="rus" role="checkbox" aria-checked="false" tabindex="0">Russian</div>
-        <div class="lang-chip" data-code="ukr" role="checkbox" aria-checked="false" tabindex="0">Ukrainian</div>
-        <div class="lang-chip" data-code="bul" role="checkbox" aria-checked="false" tabindex="0">Bulgarian</div>
-        <div class="lang-chip" data-code="fin" role="checkbox" aria-checked="false" tabindex="0">Finnish</div>
-        <div class="lang-chip" data-code="dan" role="checkbox" aria-checked="false" tabindex="0">Danish</div>
-        <div class="lang-chip" data-code="nor" role="checkbox" aria-checked="false" tabindex="0">Norwegian</div>
-        <div class="lang-chip" data-code="heb" role="checkbox" aria-checked="false" tabindex="0">Hebrew</div>
-        <div class="lang-chip" data-code="ind" role="checkbox" aria-checked="false" tabindex="0">Indonesian</div>
-        <div class="lang-chip" data-code="vie" role="checkbox" aria-checked="false" tabindex="0">Vietnamese</div>
-        <div class="lang-chip" data-code="srp" role="checkbox" aria-checked="false" tabindex="0">Serbian</div>
-        <div class="lang-chip" data-code="slv" role="checkbox" aria-checked="false" tabindex="0">Slovenian</div>
+      <div class="step-line" id="line23"></div>
+      <div class="progress-step" data-step="3" id="progStep3" tabindex="0" role="tab" aria-selected="false">
+        <div class="step-circle">4</div>
+        <span class="step-label" data-i18n="step_advanced">Advanced</span>
       </div>
     </div>
 
-    <div class="footer">
-      <button id="generateBtn" type="button">Generate Link</button>
+    <!-- WIZARD CONTENT -->
+    <div class="wizard-content">
 
-      <div class="result-panel" id="result" role="region" aria-live="polite">
-        <a id="stremioLink" href="#" class="install-btn" role="button">Install in Stremio</a>
-        <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px">Or copy URL:</div>
-        <div id="manualUrl" class="code-block" role="textbox" aria-readonly="true"></div>
+      <!-- STEP 0: WELCOME -->
+      <div class="step-panel active" id="stepPanel0">
+        <!-- Editing Banner -->
+        <div class="editing-banner" id="editingBanner" role="status">
+          <strong>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span data-i18n="editing_banner">Editing Existing Configuration</span>
+          </strong>
+          <span data-i18n="editing_desc">Your settings have been loaded. Modify and click Update.</span>
+        </div>
+
+        <span class="section-label" data-i18n="select_language">Page Language</span>
+        <div class="lang-select-row">
+          <label for="pageLangSelect">&#127760;</label>
+          <select id="pageLangSelect">
+            <option value="en">English</option>
+            <option value="ro">Romana</option>
+            <option value="fr">Fran&ccedil;ais</option>
+            <option value="es">Espa&ntilde;ol</option>
+            <option value="de">Deutsch</option>
+            <option value="it">Italiano</option>
+            <option value="pt">Portugu&ecirc;s</option>
+            <option value="ar">&#1593;&#1585;&#1576;&#1610;</option>
+          </select>
+        </div>
+
+        <div class="divider"></div>
+
+        <span class="section-label" data-i18n="presets_label">Quick Presets</span>
+        <p class="section-desc" data-i18n="presets_desc">One-click configurations for common use cases</p>
+        <div class="presets-grid" id="presetsGrid">
+          <!-- Presets loaded dynamically -->
+        </div>
+      </div>
+
+      <!-- STEP 1: PROVIDERS -->
+      <div class="step-panel" id="stepPanel1">
+        <span class="section-label" data-i18n="providers_label">Providers &amp; API Keys</span>
+        <p class="section-desc" data-i18n="step_providers_desc">Configure subtitle sources and API keys</p>
+
+        <!-- Security Warning -->
+        <div class="security-warning" role="alert">
+          <strong data-i18n="security_notice">Security Notice</strong>
+          <span data-i18n="security_text">API keys are encoded into the addon URL. For maximum security, use server environment variables.</span>
+        </div>
+
+        <div class="provider-grid" role="group" aria-labelledby="providers-label">
+          <!-- OpenSubtitles -->
+          <div class="provider-card" id="card_opensubtitles">
+            <div class="provider-header">
+              <span class="provider-name">
+                <span data-i18n="opensubtitles">OpenSubtitles</span>
+                <span class="tooltip" role="tooltip" aria-label="OpenSubtitles API key info">
+                  ?
+                  <div class="tooltiptext">
+                    Register for a free account to get your API key.
+                    <a href="https://www.opensubtitles.com/en/consumers" target="_blank" rel="noopener noreferrer" data-i18n="get_api_key">Get API Key</a>
+                  </div>
+                </span>
+              </span>
+              <label class="switch" aria-label="Enable OpenSubtitles">
+                <input type="checkbox" id="check_opensubtitles" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="provider-inputs">
+              <div class="provider-input-group">
+                <label data-i18n="api_key_opt">API Key (Optional)</label>
+                <input type="password" id="key_opensubtitles" placeholder="API Key" maxlength="256" aria-label="OpenSubtitles API Key">
+              </div>
+            </div>
+          </div>
+
+          <!-- SubDL -->
+          <div class="provider-card" id="card_subdl">
+            <div class="provider-header">
+              <span class="provider-name">
+                <span data-i18n="subdl">SubDL</span>
+                <span class="tooltip" role="tooltip" aria-label="SubDL API key info">
+                  ?
+                  <div class="tooltiptext">
+                    Create an account and find your key on the API page.
+                    <a href="https://subdl.com/" target="_blank" rel="noopener noreferrer" data-i18n="get_api_key">Get API Key</a>
+                  </div>
+                </span>
+              </span>
+              <label class="switch" aria-label="Enable SubDL">
+                <input type="checkbox" id="check_subdl" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="provider-inputs">
+              <div class="provider-input-group">
+                <label data-i18n="api_key">API Key</label>
+                <input type="password" id="key_subdl" placeholder="API Key" maxlength="256" aria-label="SubDL API Key">
+              </div>
+            </div>
+          </div>
+
+          <!-- SubSource -->
+          <div class="provider-card" id="card_subsource">
+            <div class="provider-header">
+              <span class="provider-name">
+                <span data-i18n="subsource">SubSource</span>
+                <span class="tooltip" role="tooltip" aria-label="SubSource API key info">
+                  ?
+                  <div class="tooltiptext">
+                    Register to get access to the SubSource API.
+                    <a href="https://subsource.net/" target="_blank" rel="noopener noreferrer" data-i18n="get_api_key">Get API Key</a>
+                  </div>
+                </span>
+              </span>
+              <label class="switch" aria-label="Enable SubSource">
+                <input type="checkbox" id="check_subsource" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="provider-inputs">
+              <div class="provider-input-group">
+                <label data-i18n="api_key_opt">API Key (Optional)</label>
+                <input type="password" id="key_subsource" placeholder="API Key" maxlength="256" aria-label="SubSource API Key">
+              </div>
+            </div>
+          </div>
+
+          <!-- Addic7ed -->
+          <div class="provider-card" id="card_addic7ed">
+            <div class="provider-header">
+              <span class="provider-name">
+                <span data-i18n="addic7ed">Addic7ed</span>
+                <span class="tooltip" role="tooltip" aria-label="Addic7ed credentials info">
+                  ?
+                  <div class="tooltiptext">
+                    Provide your Addic7ed username and password for access.
+                    <a href="https://www.addic7ed.com/" target="_blank" rel="noopener noreferrer">Visit Addic7ed</a>
+                  </div>
+                </span>
+              </span>
+              <label class="switch" aria-label="Enable Addic7ed">
+                <input type="checkbox" id="check_addic7ed">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="provider-inputs">
+              <div class="provider-input-group">
+                <label data-i18n="username">Username</label>
+                <input type="text" id="addic7ed_username" placeholder="Username" maxlength="128" aria-label="Addic7ed Username">
+              </div>
+              <div class="provider-input-group">
+                <label data-i18n="password">Password</label>
+                <input type="password" id="addic7ed_password" placeholder="Password" maxlength="256" aria-label="Addic7ed Password">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Provider Priority -->
+        <span class="section-label" data-i18n="provider_priority">Provider Priority</span>
+        <p class="section-desc" data-i18n="priority_desc">Drag to reorder. Higher = preferred.</p>
+        <ul class="priority-list" id="priorityList" role="listbox" aria-label="Provider priority order">
+          <!-- Rendered dynamically -->
+        </ul>
+      </div>
+
+      <!-- STEP 2: LANGUAGES -->
+      <div class="step-panel" id="stepPanel2">
+        <span class="section-label" data-i18n="languages_label">Preferred Languages</span>
+        <p class="section-desc" data-i18n="step_languages_desc">Select your preferred subtitle languages</p>
+
+        <div class="lang-container" id="langPicker" role="group" aria-label="Language selection">
+          <div class="lang-chip active" data-code="eng" role="checkbox" aria-checked="true" tabindex="0">English</div>
+          <div class="lang-chip" data-code="ron" role="checkbox" aria-checked="false" tabindex="0">Romanian</div>
+          <div class="lang-chip" data-code="fre" role="checkbox" aria-checked="false" tabindex="0">French</div>
+          <div class="lang-chip" data-code="spa" role="checkbox" aria-checked="false" tabindex="0">Spanish</div>
+          <div class="lang-chip" data-code="ger" role="checkbox" aria-checked="false" tabindex="0">German</div>
+          <div class="lang-chip" data-code="ita" role="checkbox" aria-checked="false" tabindex="0">Italian</div>
+          <div class="lang-chip" data-code="por" role="checkbox" aria-checked="false" tabindex="0">Portuguese</div>
+          <div class="lang-chip" data-code="gre" role="checkbox" aria-checked="false" tabindex="0">Greek</div>
+          <div class="lang-chip" data-code="hun" role="checkbox" aria-checked="false" tabindex="0">Hungarian</div>
+          <div class="lang-chip" data-code="ara" role="checkbox" aria-checked="false" tabindex="0">Arabic</div>
+          <div class="lang-chip" data-code="jpn" role="checkbox" aria-checked="false" tabindex="0">Japanese</div>
+          <div class="lang-chip" data-code="kor" role="checkbox" aria-checked="false" tabindex="0">Korean</div>
+          <div class="lang-chip" data-code="chi" role="checkbox" aria-checked="false" tabindex="0">Chinese</div>
+          <div class="lang-chip" data-code="tur" role="checkbox" aria-checked="false" tabindex="0">Turkish</div>
+          <div class="lang-chip" data-code="dut" role="checkbox" aria-checked="false" tabindex="0">Dutch</div>
+          <div class="lang-chip" data-code="swe" role="checkbox" aria-checked="false" tabindex="0">Swedish</div>
+          <div class="lang-chip" data-code="hin" role="checkbox" aria-checked="false" tabindex="0">Hindi</div>
+          <div class="lang-chip" data-code="tha" role="checkbox" aria-checked="false" tabindex="0">Thai</div>
+          <div class="lang-chip" data-code="cze" role="checkbox" aria-checked="false" tabindex="0">Czech</div>
+          <div class="lang-chip" data-code="pol" role="checkbox" aria-checked="false" tabindex="0">Polish</div>
+          <div class="lang-chip" data-code="hrv" role="checkbox" aria-checked="false" tabindex="0">Croatian</div>
+          <div class="lang-chip" data-code="rus" role="checkbox" aria-checked="false" tabindex="0">Russian</div>
+          <div class="lang-chip" data-code="ukr" role="checkbox" aria-checked="false" tabindex="0">Ukrainian</div>
+          <div class="lang-chip" data-code="bul" role="checkbox" aria-checked="false" tabindex="0">Bulgarian</div>
+          <div class="lang-chip" data-code="fin" role="checkbox" aria-checked="false" tabindex="0">Finnish</div>
+          <div class="lang-chip" data-code="dan" role="checkbox" aria-checked="false" tabindex="0">Danish</div>
+          <div class="lang-chip" data-code="nor" role="checkbox" aria-checked="false" tabindex="0">Norwegian</div>
+          <div class="lang-chip" data-code="heb" role="checkbox" aria-checked="false" tabindex="0">Hebrew</div>
+          <div class="lang-chip" data-code="ind" role="checkbox" aria-checked="false" tabindex="0">Indonesian</div>
+          <div class="lang-chip" data-code="vie" role="checkbox" aria-checked="false" tabindex="0">Vietnamese</div>
+          <div class="lang-chip" data-code="srp" role="checkbox" aria-checked="false" tabindex="0">Serbian</div>
+          <div class="lang-chip" data-code="slv" role="checkbox" aria-checked="false" tabindex="0">Slovenian</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- HI Toggle -->
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-title" data-i18n="hi_toggle">Include Hearing Impaired (HI/CC)</div>
+            <div class="toggle-desc" data-i18n="hi_desc">Show subtitles for hearing impaired users</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="hiToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Release Matching Toggle -->
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-title" data-i18n="release_matching">Release Name Matching</div>
+            <div class="toggle-desc" data-i18n="release_desc">Prefer subtitles matching your video release</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="releaseToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- STEP 3: ADVANCED -->
+      <div class="step-panel" id="stepPanel3">
+        <span class="section-label" data-i18n="advanced_label">Advanced Options</span>
+        <p class="section-desc" data-i18n="step_advanced_desc">Fine-tune your experience</p>
+
+        <!-- MT Fallback Toggle -->
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-title" data-i18n="mt_fallback">Machine Translation Fallback</div>
+            <div class="toggle-desc" data-i18n="mt_desc">Auto-translate when no subtitles available</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="mtToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Profiles -->
+        <div class="profiles-section">
+          <span class="section-label" data-i18n="profiles_label">Configuration Profiles</span>
+          <p class="section-desc" data-i18n="profiles_desc">Save and switch between configurations</p>
+          <div class="profiles-header">
+            <input type="text" id="profileNameInput" placeholder="Profile name..." data-i18n-placeholder="profile_name_ph" aria-label="New profile name">
+            <button class="btn-sm btn-primary-sm" id="btnSaveProfile" type="button" data-i18n="profile_save">Save Current</button>
+          </div>
+          <div class="profiles-list" id="profilesList">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Import/Export -->
+        <span class="section-label" data-i18n="import_export">Import / Export</span>
+        <div class="ie-row">
+          <button class="btn-ie" id="btnImport" type="button">
+            <span class="btn-ie-icon">&#128229;</span>
+            <span data-i18n="import_btn">Import Config</span>
+          </button>
+          <button class="btn-ie" id="btnExport" type="button">
+            <span class="btn-ie-icon">&#128228;</span>
+            <span data-i18n="export_btn">Export Config</span>
+          </button>
+        </div>
+        <input type="file" id="importFileInput" class="hidden-input" accept=".json">
+
+        <div class="divider"></div>
+
+        <!-- Feedback -->
+        <div class="feedback-section">
+          <span class="section-label" data-i18n="feedback_label">Feedback</span>
+          <div class="feedback-links">
+            <a class="feedback-btn" href="https://github.com/C0st1/Subtitles-Addon/issues/new?template=bug_report.md" target="_blank" rel="noopener noreferrer" data-i18n="report_issue">Report an Issue</a>
+            <a class="feedback-btn" href="https://github.com/C0st1/Subtitles-Addon/issues/new?template=feature_request.md" target="_blank" rel="noopener noreferrer" data-i18n="request_feature">Request a Feature</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- WIZARD FOOTER / NAVIGATION -->
+    <div class="wizard-footer">
+      <button class="btn-nav btn-back" id="btnBack" type="button" style="display:none;" data-i18n="back">Back</button>
+      <button class="btn-nav btn-next" id="btnNext" type="button" data-i18n="next">Next</button>
+    </div>
+
+    <!-- RESULT PANEL -->
+    <div class="wizard-footer" id="resultWrapper" style="display:none; border-top: 1px solid var(--border); padding-top: 0;">
+      <div style="width:100%; padding: 0 32px 24px;">
+        <div class="result-panel" id="result" role="region" aria-live="polite" style="display:block;">
+          <a id="stremioLink" href="#" class="install-btn" role="button" data-i18n="install_stremio">Install in Stremio</a>
+          <div class="short-url-section" id="shortUrlSection" style="display:none;">
+            <div class="result-label">Short URL</div>
+            <div class="url-row">
+              <div class="code-block" id="shortUrlDisplay"></div>
+              <button class="btn-copy" id="btnCopyShort" type="button">&#128203;</button>
+            </div>
+          </div>
+          <div class="result-label" data-i18n="or_copy_url">Or copy URL:</div>
+          <div class="url-row">
+            <div class="code-block" id="manualUrl" role="textbox" aria-readonly="true"></div>
+            <button class="btn-copy" id="btnCopyFull" type="button">&#128203;</button>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <button class="btn-nav btn-back" id="btnBackToWizard" type="button" style="width:auto;" data-i18n="back">Back</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Initial config injection (set by server for pre-fill when user returns via Gear icon) -->
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- INITIAL CONFIG INJECTION -->
   <script nonce="{{CSP_NONCE}}">
     window.__INITIAL_CONFIG__ = {{INITIAL_CONFIG}};
+    window.__TRANSLATIONS__ = window.__TRANSLATIONS__ || null;
   </script>
 
-  <!-- Inline script (CSP nonce is injected by server) -->
+  <!-- MAIN APPLICATION SCRIPT -->
   <script nonce="{{CSP_NONCE}}">
-    // Language chip interaction with keyboard and click support
-    document.querySelectorAll('.lang-chip').forEach(function(chip) {
-      chip.addEventListener('click', function() { toggleChip(chip); });
-      chip.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggleChip(chip);
+    (function() {
+      'use strict';
+
+      // ===========================
+      // i18n TRANSLATION SYSTEM
+      // ===========================
+      var DEFAULT_TRANSLATIONS = {
+        en: {
+          title: "Subtitle Hub", subtitle: "Configure your subtitle addon",
+          step_welcome: "Welcome", step_providers: "Providers", step_languages: "Languages", step_advanced: "Advanced",
+          step_welcome_desc: "Choose your language and get started", step_providers_desc: "Configure subtitle sources and API keys",
+          step_languages_desc: "Select your preferred subtitle languages", step_advanced_desc: "Fine-tune your experience",
+          next: "Next", back: "Back", generate: "Generate Link", update: "Update Addon",
+          install_stremio: "Install in Stremio", or_copy_url: "Or copy URL:",
+          providers_label: "Providers & API Keys", languages_label: "Preferred Languages", advanced_label: "Advanced Options",
+          hi_toggle: "Include Hearing Impaired (HI/CC)", hi_desc: "Show subtitles for hearing impaired users",
+          release_matching: "Release Name Matching", release_desc: "Prefer subtitles matching your video release",
+          mt_fallback: "Machine Translation Fallback", mt_desc: "Auto-translate when no subtitles available",
+          provider_priority: "Provider Priority", priority_desc: "Drag to reorder. Higher = preferred.",
+          profiles_label: "Configuration Profiles", profiles_desc: "Save and switch between configurations",
+          profile_new: "New Profile", profile_name_ph: "Profile name...", profile_save: "Save Current", profile_delete: "Delete", profile_switch: "Switch",
+          import_export: "Import / Export", import_btn: "Import Config", export_btn: "Export Config",
+          import_success: "Configuration imported successfully!", import_error: "Invalid configuration file.",
+          presets_label: "Quick Presets", presets_desc: "One-click configurations for common use cases",
+          feedback_label: "Feedback", report_issue: "Report an Issue", request_feature: "Request a Feature",
+          select_language: "Page Language", no_langs: "Select at least one language!", no_providers: "Enable at least one provider!",
+          get_api_key: "Get API Key", security_notice: "Security Notice",
+          security_text: "API keys are encoded into the addon URL. For maximum security, use server environment variables.",
+          editing_banner: "Editing Existing Configuration", editing_desc: "Your settings have been loaded. Modify and click Update.",
+          addic7ed: "Addic7ed", opensubtitles: "OpenSubtitles", subdl: "SubDL", subsource: "SubSource",
+          api_key: "API Key", api_key_opt: "API Key (Optional)", username: "Username", password: "Password",
+          enabled: "Enabled", disabled: "Disabled"
+        },
+        ro: {
+          title: "Subtitle Hub", subtitle: "Configureaz\u0103 addon-ul de subtitr\u0103ri",
+          step_welcome: "Bun venit", step_providers: "Furnizori", step_languages: "Limbi", step_advanced: "Avansat",
+          step_welcome_desc: "Alege\u021bi limba \u0219i \u00eencepe\u021bi", step_providers_desc: "Configura\u021bi sursele de subtitr\u0103ri \u0219i cheile API",
+          step_languages_desc: "Selecta\u021bi limbile preferate pentru subtitr\u0103ri", step_advanced_desc: "Personaliza\u021bi-v\u0103 experien\u021ba",
+          next: "Urm\u0103torul", back: "\u00cenapoi", generate: "Genereaz\u0103 Link", update: "Actualizeaz\u0103 Addon",
+          install_stremio: "Instaleaz\u0103 \u00een Stremio", or_copy_url: "Sau copiaz\u0103 URL:",
+          providers_label: "Furnizori \u0219i Chei API", languages_label: "Limbi Preferate", advanced_label: "Op\u021biuni Avansate",
+          hi_toggle: "Include subtitr\u0103ri pentru persoane cu deficien\u021be de auz (HI/CC)", hi_desc: "Arat\u0103 subtitr\u0103ri pentru utilizatorii cu deficien\u021be de auz",
+          release_matching: "Potrivire Nume Release", release_desc: "Prefer\u0103 subtitr\u0103rile care se potrivesc cu release-ul video",
+          mt_fallback: "Fallback Traducere Automat\u0103", mt_desc: "Traduce automat c\u00e2nd nu sunt disponibile subtitr\u0103ri",
+          provider_priority: "Prioritate Furnizori", priority_desc: "Trage pentru a reordona. Mai sus = preferat.",
+          profiles_label: "Profile de Configurare", profiles_desc: "Salva\u021bi \u0219i comuta\u021bi \u00eentre configura\u021bii",
+          profile_new: "Profil Nou", profile_name_ph: "Nume profil...", profile_save: "Salveaz\u0103", profile_delete: "\u0218terge", profile_switch: "Comuta\u021bi",
+          import_export: "Import / Export", import_btn: "Import\u0103 Config", export_btn: "Export\u0103 Config",
+          import_success: "Configura\u021bie importat\u0103 cu succes!", import_error: "Fi\u0219ier de configura\u021bie invalid.",
+          presets_label: "Preset\u0103ri Rapide", presets_desc: "Configura\u021bii cu un click pentru cazuri comune",
+          feedback_label: "Feedback", report_issue: "Raporteaz\u0103 o Problem\u0103", request_feature: "Cere o Func\u021bionalitate",
+          select_language: "Limba Paginii", no_langs: "Selecta\u021bi cel pu\u021bin o limb\u0103!", no_providers: "Activa\u021bi cel pu\u021bin un furnizor!",
+          get_api_key: "Ob\u021bine Cheie API", security_notice: "Avertisment de Securitate",
+          security_text: "Cheile API sunt codate \u00een URL-ul addon-ului. Pentru securitate maxim\u0103, folosi\u021bi variabile de mediu pe server.",
+          editing_banner: "Editare Configura\u021bie Existent\u0103", editing_desc: "Set\u0103rile au fost \u00eenc\u0103rcate. Modifica\u021bi \u0219i face\u021bi clic pe Actualizare.",
+          addic7ed: "Addic7ed", opensubtitles: "OpenSubtitles", subdl: "SubDL", subsource: "SubSource",
+          api_key: "Cheie API", api_key_opt: "Cheie API (Op\u021bional\u0103)", username: "Nume utilizator", password: "Parol\u0103",
+          enabled: "Activat", disabled: "Dezactivat"
+        },
+        fr: {
+          title: "Subtitle Hub", subtitle: "Configurez votre extension de sous-titres",
+          step_welcome: "Bienvenue", step_providers: "Fournisseurs", step_languages: "Langues", step_advanced: "Avanc\u00e9",
+          step_welcome_desc: "Choisissez votre langue et commencez", step_providers_desc: "Configurez les sources de sous-titres et cl\u00e9s API",
+          step_languages_desc: "S\u00e9lectionnez vos langues de sous-titres pr\u00e9f\u00e9r\u00e9es", step_advanced_desc: "Personnalisez votre exp\u00e9rience",
+          next: "Suivant", back: "Retour", generate: "G\u00e9n\u00e9rer le lien", update: "Mettre \u00e0 jour",
+          install_stremio: "Installer dans Stremio", or_copy_url: "Ou copier l'URL :",
+          providers_label: "Fournisseurs & Cl\u00e9s API", languages_label: "Langues Pr\u00e9f\u00e9r\u00e9es", advanced_label: "Options Avanc\u00e9es",
+          hi_toggle: "Inclure malentendants (HI/CC)", hi_desc: "Afficher les sous-titres pour malentendants",
+          release_matching: "Correspondance de Release", release_desc: "Pr\u00e9f\u00e9rer les sous-titres correspondant \u00e0 votre release",
+          mt_fallback: "Traduction Automatique", mt_desc: "Traduire automatiquement si aucun sous-titre disponible",
+          provider_priority: "Priorit\u00e9 des Fournisseurs", priority_desc: "Glissez pour r\u00e9ordonner. Plus haut = pr\u00e9f\u00e9r\u00e9.",
+          profiles_label: "Profils de Configuration", profiles_desc: "Sauvegardez et changez entre les configurations",
+          profile_new: "Nouveau Profil", profile_name_ph: "Nom du profil...", profile_save: "Sauvegarder", profile_delete: "Supprimer", profile_switch: "Changer",
+          import_export: "Import / Export", import_btn: "Importer Config", export_btn: "Exporter Config",
+          import_success: "Configuration import\u00e9e avec succ\u00e8s !", import_error: "Fichier de configuration invalide.",
+          presets_label: "Pr\u00e9r\u00e9glages Rapides", presets_desc: "Configurations en un clic pour cas courants",
+          feedback_label: "Commentaires", report_issue: "Signaler un Probl\u00e8me", request_feature: "Demander une Fonctionnalit\u00e9",
+          select_language: "Langue de la Page", no_langs: "S\u00e9lectionnez au moins une langue !", no_providers: "Activez au moins un fournisseur !",
+          get_api_key: "Obtenir Cl\u00e9 API", security_notice: "Avis de S\u00e9curit\u00e9",
+          security_text: "Les cl\u00e9s API sont encod\u00e9es dans l'URL. Pour une s\u00e9curit\u00e9 maximale, utilisez des variables d'environnement.",
+          editing_banner: "Modification de la Configuration", editing_desc: "Vos param\u00e8tres ont \u00e9t\u00e9 charg\u00e9s. Modifiez et cliquez sur Mettre \u00e0 jour.",
+          addic7ed: "Addic7ed", opensubtitles: "OpenSubtitles", subdl: "SubDL", subsource: "SubSource",
+          api_key: "Cl\u00e9 API", api_key_opt: "Cl\u00e9 API (Optionnelle)", username: "Nom d'utilisateur", password: "Mot de passe",
+          enabled: "Activ\u00e9", disabled: "D\u00e9sactiv\u00e9"
+        },
+        es: {
+          title: "Subtitle Hub", subtitle: "Configura tu complemento de subt\u00edtulos",
+          step_welcome: "Bienvenido", step_providers: "Proveedores", step_languages: "Idiomas", step_advanced: "Avanzado",
+          step_welcome_desc: "Elige tu idioma y comienza", step_providers_desc: "Configura fuentes de subt\u00edtulos y claves API",
+          step_languages_desc: "Selecciona tus idiomas preferidos", step_advanced_desc: "Personaliza tu experiencia",
+          next: "Siguiente", back: "Atr\u00e1s", generate: "Generar Enlace", update: "Actualizar Complemento",
+          install_stremio: "Instalar en Stremio", or_copy_url: "O copia la URL:",
+          providers_label: "Proveedores y Claves API", languages_label: "Idiomas Preferidos", advanced_label: "Opciones Avanzadas",
+          hi_toggle: "Incluir subt\u00edtulos para discapacitados auditivos (HI/CC)", hi_desc: "Mostrar subt\u00edtulos para usuarios con discapacidad auditiva",
+          release_matching: "Coincidencia de Release", release_desc: "Preferir subt\u00edtulos que coincidan con tu release",
+          mt_fallback: "Traducci\u00f3n Autom\u00e1tica", mt_desc: "Traducir autom\u00e1ticamente cuando no haya subt\u00edtulos",
+          provider_priority: "Prioridad de Proveedores", priority_desc: "Arrastra para reordenar. M\u00e1s arriba = preferido.",
+          profiles_label: "Perfiles de Configuraci\u00f3n", profiles_desc: "Guarda y cambia entre configuraciones",
+          profile_new: "Nuevo Perfil", profile_name_ph: "Nombre del perfil...", profile_save: "Guardar", profile_delete: "Eliminar", profile_switch: "Cambiar",
+          import_export: "Importar / Exportar", import_btn: "Importar Config", export_btn: "Exportar Config",
+          import_success: "\u00a1Configuraci\u00f3n importada con \u00e9xito!", import_error: "Archivo de configuraci\u00f3n inv\u00e1lido.",
+          presets_label: "Ajustes R\u00e1pidos", presets_desc: "Configuraciones con un clic para casos comunes",
+          feedback_label: "Comentarios", report_issue: "Reportar un Problema", request_feature: "Solicitar una Funci\u00f3n",
+          select_language: "Idioma de la P\u00e1gina", no_langs: "\u00a1Selecciona al menos un idioma!", no_providers: "\u00a1Activa al menos un proveedor!",
+          get_api_key: "Obtener Clave API", security_notice: "Aviso de Seguridad",
+          security_text: "Las claves API se codifican en la URL del complemento. Para m\u00e1xima seguridad, usa variables de entorno del servidor.",
+          editing_banner: "Editando Configuraci\u00f3n Existente", editing_desc: "Tus ajustes han sido cargados. Modifica y haz clic en Actualizar.",
+          addic7ed: "Addic7ed", opensubtitles: "OpenSubtitles", subdl: "SubDL", subsource: "SubSource",
+          api_key: "Clave API", api_key_opt: "Clave API (Opcional)", username: "Nombre de usuario", password: "Contrase\u00f1a",
+          enabled: "Activado", disabled: "Desactivado"
+        },
+        de: {
+          title: "Subtitle Hub", subtitle: "Konfiguriere dein Untertitel-Addon",
+          step_welcome: "Willkommen", step_providers: "Anbieter", step_languages: "Sprachen", step_advanced: "Erweitert",
+          step_welcome_desc: "W\u00e4hle deine Sprache und beginne", step_providers_desc: "Konfiguriere Untertitelquellen und API-Schl\u00fcssel",
+          step_languages_desc: "W\u00e4hle deine bevorzugten Untertitelsprachen", step_advanced_desc: "Passe deine Erfahrung an",
+          next: "Weiter", back: "Zur\u00fcck", generate: "Link generieren", update: "Addon aktualisieren",
+          install_stremio: "In Stremio installieren", or_copy_url: "Oder URL kopieren:",
+          providers_label: "Anbieter & API-Schl\u00fcssel", languages_label: "Bevorzugte Sprachen", advanced_label: "Erweiterte Optionen",
+          hi_toggle: "Untertitel f\u00fcr H\u00f6rgesch\u00e4digte (HI/CC)", hi_desc: "Untertitel f\u00fcr h\u00f6rgesch\u00e4digte Benutzer anzeigen",
+          release_matching: "Release-Abgleich", release_desc: "Untertitel bevorzugen, die zum Video-Release passen",
+          mt_fallback: "Maschinelle \u00dcbersetzung", mt_desc: "Automatisch \u00fcbersetzen wenn keine Untertitel verf\u00fcgbar",
+          provider_priority: "Anbieter-Priorit\u00e4t", priority_desc: "Ziehen zum Neuordnen. H\u00f6her = bevorzugt.",
+          profiles_label: "Konfigurationsprofile", profiles_desc: "Konfigurationen speichern und wechseln",
+          profile_new: "Neues Profil", profile_name_ph: "Profilname...", profile_save: "Speichern", profile_delete: "L\u00f6schen", profile_switch: "Wechseln",
+          import_export: "Import / Export", import_btn: "Config importieren", export_btn: "Config exportieren",
+          import_success: "Konfiguration erfolgreich importiert!", import_error: "Ung\u00fcltige Konfigurationsdatei.",
+          presets_label: "Schnellvorgaben", presets_desc: "Ein-Klick-Konfigurationen f\u00fcr h\u00e4ufige F\u00e4lle",
+          feedback_label: "Feedback", report_issue: "Problem melden", request_feature: "Funktion w\u00fcnschen",
+          select_language: "Seitensprache", no_langs: "W\u00e4hle mindestens eine Sprache!", no_providers: "Aktiviere mindestens einen Anbieter!",
+          get_api_key: "API-Schl\u00fcssel holen", security_notice: "Sicherheitshinweis",
+          security_text: "API-Schl\u00fcssel werden in die Addon-URL kodiert. F\u00fcr maximale Sicherheit Server-Umgebungsvariablen verwenden.",
+          editing_banner: "Bestehende Konfiguration bearbeiten", editing_desc: "Deine Einstellungen wurden geladen. \u00c4ndere und klicke auf Aktualisieren.",
+          addic7ed: "Addic7ed", opensubtitles: "OpenSubtitles", subdl: "SubDL", subsource: "SubSource",
+          api_key: "API-Schl\u00fcssel", api_key_opt: "API-Schl\u00fcssel (Optional)", username: "Benutzername", password: "Passwort",
+          enabled: "Aktiviert", disabled: "Deaktiviert"
+        },
+        it: {
+          title: "Subtitle Hub", subtitle: "Configura il tuo addon sottotitoli",
+          step_welcome: "Benvenuto", step_providers: "Provider", step_languages: "Lingue", step_advanced: "Avanzato",
+          step_welcome_desc: "Scegli la tua lingua e inizia", step_providers_desc: "Configura fonti di sottotitoli e chiavi API",
+          step_languages_desc: "Seleziona le tue lingue preferite", step_advanced_desc: "Personalizza la tua esperienza",
+          next: "Avanti", back: "Indietro", generate: "Genera Link", update: "Aggiorna Addon",
+          install_stremio: "Installa in Stremio", or_copy_url: "Oppure copia l'URL:",
+          providers_label: "Provider e Chiavi API", languages_label: "Lingue Preferite", advanced_label: "Opzioni Avanzate",
+          hi_toggle: "Includi sottotitoli per non udenti (HI/CC)", hi_desc: "Mostra sottotitoli per utenti non udenti",
+          release_matching: "Corrispondenza Release", release_desc: "Preferisci sottotitoli corrispondenti alla tua release",
+          mt_fallback: "Traduzione Automatica", mt_desc: "Traduci automaticamente quando non ci sono sottotitoli",
+          provider_priority: "Priorit\u00e0 Provider", priority_desc: "Trascina per riordinare. Pi\u00f9 in alto = preferito.",
+          profiles_label: "Profili di Configurazione", profiles_desc: "Salva e passa tra le configurazioni",
+          profile_new: "Nuovo Profilo", profile_name_ph: "Nome profilo...", profile_save: "Salva", profile_delete: "Elimina", profile_switch: "Cambia",
+          import_export: "Importa / Esporta", import_btn: "Importa Config", export_btn: "Esporta Config",
+          import_success: "Configurazione importata con successo!", import_error: "File di configurazione non valido.",
+          presets_label: "Preset Rapidi", presets_desc: "Configurazioni con un clic per casi comuni",
+          feedback_label: "Feedback", report_issue: "Segnala un Problema", request_feature: "Richiedi una Funzionalit\u00e0",
+          select_language: "Lingua della Pagina", no_langs: "Seleziona almeno una lingua!", no_providers: "Attiva almeno un provider!",
+          get_api_key: "Ottieni Chiave API", security_notice: "Avviso di Sicurezza",
+          security_text: "Le chiavi API sono codificate nell'URL. Per massima sicurezza, usa variabili d'ambiente sul server.",
+          editing_banner: "Modifica Configurazione Esistente", editing_desc: "Le tue impostazioni sono state caricate. Modifica e clicca Aggiorna.",
+          addic7ed: "Addic7ed", opensubtitles: "OpenSubtitles", subdl: "SubDL", subsource: "SubSource",
+          api_key: "Chiave API", api_key_opt: "Chiave API (Opzionale)", username: "Nome utente", password: "Password",
+          enabled: "Attivato", disabled: "Disattivato"
+        },
+        pt: {
+          title: "Subtitle Hub", subtitle: "Configure seu addon de legendas",
+          step_welcome: "Bem-vindo", step_providers: "Provedores", step_languages: "Idiomas", step_advanced: "Avan\u00e7ado",
+          step_welcome_desc: "Escolha seu idioma e comece", step_providers_desc: "Configure fontes de legendas e chaves API",
+          step_languages_desc: "Selecione seus idiomas preferidos", step_advanced_desc: "Personalize sua experi\u00eancia",
+          next: "Pr\u00f3ximo", back: "Voltar", generate: "Gerar Link", update: "Atualizar Addon",
+          install_stremio: "Instalar no Stremio", or_copy_url: "Ou copie a URL:",
+          providers_label: "Provedores e Chaves API", languages_label: "Idiomas Preferidos", advanced_label: "Op\u00e7\u00f5es Avan\u00e7adas",
+          hi_toggle: "Incluir legendas para deficientes auditivos (HI/CC)", hi_desc: "Mostrar legendas para usu\u00e1rios com defici\u00eancia auditiva",
+          release_matching: "Correspond\u00eancia de Release", release_desc: "Preferir legendas correspondentes ao seu release",
+          mt_fallback: "Tradu\u00e7\u00e3o Autom\u00e1tica", mt_desc: "Traduzir automaticamente quando n\u00e3o houver legendas",
+          provider_priority: "Prioridade dos Provedores", priority_desc: "Arraste para reordenar. Mais alto = preferido.",
+          profiles_label: "Perfis de Configura\u00e7\u00e3o", profiles_desc: "Salve e alterne entre configura\u00e7\u00f5es",
+          profile_new: "Novo Perfil", profile_name_ph: "Nome do perfil...", profile_save: "Salvar", profile_delete: "Excluir", profile_switch: "Trocar",
+          import_export: "Importar / Exportar", import_btn: "Importar Config", export_btn: "Exportar Config",
+          import_success: "Configura\u00e7\u00e3o importada com sucesso!", import_error: "Arquivo de configura\u00e7\u00e3o inv\u00e1lido.",
+          presets_label: "Predefini\u00e7\u00f5es R\u00e1pidas", presets_desc: "Configura\u00e7\u00f5es com um clique para casos comuns",
+          feedback_label: "Feedback", report_issue: "Reportar um Problema", request_feature: "Solicitar uma Funcionalidade",
+          select_language: "Idioma da P\u00e1gina", no_langs: "Selecione pelo menos um idioma!", no_providers: "Ative pelo menos um provedor!",
+          get_api_key: "Obter Chave API", security_notice: "Aviso de Seguran\u00e7a",
+          security_text: "As chaves API s\u00e3o codificadas na URL do addon. Para m\u00e1xima seguran\u00e7a, use vari\u00e1veis de ambiente no servidor.",
+          editing_banner: "Editando Configura\u00e7\u00e3o Existente", editing_desc: "Suas configura\u00e7\u00f5es foram carregadas. Modifique e clique em Atualizar.",
+          addic7ed: "Addic7ed", opensubtitles: "OpenSubtitles", subdl: "SubDL", subsource: "SubSource",
+          api_key: "Chave API", api_key_opt: "Chave API (Opcional)", username: "Nome de usu\u00e1rio", password: "Senha",
+          enabled: "Ativado", disabled: "Desativado"
+        },
+        ar: {
+          title: "Subtitle Hub", subtitle: "\u062a\u0643\u0648\u064a\u0646 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062a\u0631\u062c\u0645\u0629",
+          step_welcome: "\u0645\u0631\u062d\u0628\u0627", step_providers: "\u0627\u0644\u0645\u0632\u0648\u062f\u0648\u0646", step_languages: "\u0627\u0644\u0644\u063a\u0627\u062a", step_advanced: "\u0645\u062a\u0642\u062f\u0645",
+          step_welcome_desc: "\u0627\u062e\u062a\u0631 \u0644\u063a\u062a\u0643 \u0648\u0627\u0628\u062f\u0623", step_providers_desc: "\u062a\u0643\u0648\u064a\u0646 \u0645\u0635\u0627\u062f\u0631 \u0627\u0644\u062a\u0631\u062c\u0645\u0629 \u0648\u0645\u0641\u0627\u062a\u064a\u062d API",
+          step_languages_desc: "\u0627\u062e\u062a\u0631 \u0644\u063a\u0627\u062a \u0627\u0644\u062a\u0631\u062c\u0645\u0629 \u0627\u0644\u0645\u0641\u0636\u0644\u0629", step_advanced_desc: "\u062a\u062e\u0635\u064a\u0635 \u062a\u062c\u0631\u0628\u062a\u0643",
+          next: "\u0627\u0644\u062a\u0627\u0644\u064a", back: "\u0633\u0627\u0628\u0642", generate: "\u0625\u0646\u0634\u0627\u0621 \u0631\u0627\u0628\u0637", update: "\u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0625\u0636\u0627\u0641\u0629",
+          install_stremio: "\u062a\u062b\u0628\u064a\u062a \u0641\u064a Stremio", or_copy_url: "\u0623\u0648 \u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637:",
+          providers_label: "\u0627\u0644\u0645\u0632\u0648\u062f\u0648\u0646 \u0648\u0645\u0641\u0627\u062a\u064a\u062d API", languages_label: "\u0627\u0644\u0644\u063a\u0627\u062a \u0627\u0644\u0645\u0641\u0636\u0644\u0629", advanced_label: "\u062e\u064a\u0627\u0631\u0627\u062a \u0645\u062a\u0642\u062f\u0645\u0629",
+          hi_toggle: "\u062a\u0636\u0645\u064a\u0646 \u062a\u0631\u062c\u0645\u0629 \u0636\u0639\u0627\u0641 \u0627\u0644\u0633\u0645\u0639 (HI/CC)", hi_desc: "\u0639\u0631\u0636 \u062a\u0631\u062c\u0645\u0629 \u0644\u0630\u0648\u064a \u0625\u0639\u0627\u0642\u0629 \u0627\u0644\u0633\u0645\u0639",
+          release_matching: "\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0625\u0635\u062f\u0627\u0631", release_desc: "\u062a\u0641\u0636\u064a\u0644 \u062a\u0631\u062c\u0645\u0629 \u062a\u062a\u0637\u0627\u0628\u0642 \u0645\u0639 \u0627\u0644\u0625\u0635\u062f\u0627\u0631",
+          mt_fallback: "\u0627\u0644\u062a\u0631\u062c\u0645\u0629 \u0627\u0644\u0622\u0644\u064a\u0629", mt_desc: "\u062a\u0631\u062c\u0645\u0629 \u062a\u0644\u0642\u0627\u0626\u064a\u0629 \u0639\u0646\u062f\u0645\u0627 \u0644\u0627 \u062a\u0648\u062c\u062f \u062a\u0631\u062c\u0645\u0629",
+          provider_priority: "\u0623\u0648\u0644\u0648\u064a\u0629 \u0627\u0644\u0645\u0632\u0648\u062f\u064a\u0646", priority_desc: "\u0627\u0633\u062d\u0628 \u0644\u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u062a\u0631\u062a\u064a\u0628. \u0623\u0639\u0644\u0649 = \u0645\u0641\u0636\u0644.",
+          profiles_label: "\u0645\u0644\u0641\u0627\u062a \u0627\u0644\u062a\u0643\u0648\u064a\u0646", profiles_desc: "\u062d\u0641\u0638 \u0648\u062a\u0628\u062f\u064a\u0644 \u0628\u064a\u0646 \u0627\u0644\u062a\u0643\u0648\u064a\u0646\u0627\u062a",
+          profile_new: "\u0645\u0644\u0641 \u062c\u062f\u064a\u062f", profile_name_ph: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0644\u0641...", profile_save: "\u062d\u0641\u0638", profile_delete: "\u062d\u0630\u0641", profile_switch: "\u062a\u0628\u062f\u064a\u0644",
+          import_export: "\u0627\u0633\u062a\u064a\u0631\u0627\u062f / \u062a\u0635\u062f\u064a\u0631", import_btn: "\u0627\u0633\u062a\u064a\u0631\u0627\u062f \u062a\u0643\u0648\u064a\u0646", export_btn: "\u062a\u0635\u062f\u064a\u0631 \u062a\u0643\u0648\u064a\u0646",
+          import_success: "\u062a\u0645 \u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0627\u0644\u062a\u0643\u0648\u064a\u0646 \u0628\u0646\u062c\u0627\u062d!", import_error: "\u0645\u0644\u0641 \u062a\u0643\u0648\u064a\u0646 \u063a\u064a\u0631 \u0635\u0627\u0644\u062d.",
+          presets_label: "\u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0633\u0631\u064a\u0639\u0629", presets_desc: "\u062a\u0643\u0648\u064a\u0646\u0627\u062a \u0628\u0646\u0642\u0631\u0629 \u0648\u0627\u062d\u062f\u0629 \u0644\u0644\u062d\u0627\u0644\u0627\u062a \u0627\u0644\u0634\u0627\u0626\u0639\u0629",
+          feedback_label: "\u0645\u0644\u0627\u062d\u0638\u0627\u062a", report_issue: "\u0627\u0644\u0625\u0628\u0644\u0627\u063a \u0639\u0646 \u0645\u0634\u0643\u0644\u0629", request_feature: "\u0637\u0644\u0628 \u0645\u064a\u0632\u0629",
+          select_language: "\u0644\u063a\u0629 \u0627\u0644\u0635\u0641\u062d\u0629", no_langs: "\u0627\u062e\u062a\u0631 \u0644\u063a\u0629 \u0648\u0627\u062d\u062f\u0629 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644!", no_providers: "\u0641\u0639\u0651\u0644 \u0645\u0632\u0648\u062f\u0627 \u0648\u0627\u062d\u062f\u0627 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644!",
+          get_api_key: "\u0627\u0644\u062d\u0635\u0648\u0644 \u0639\u0644\u0649 \u0645\u0641\u062a\u0627\u062d API", security_notice: "\u0625\u0634\u0639\u0627\u0631 \u0623\u0645\u0646\u064a",
+          security_text: "\u0645\u0641\u0627\u062a\u064a\u062d API \u0645\u0634\u0641\u0631\u0629 \u0641\u064a \u0631\u0627\u0628\u0637 \u0627\u0644\u0625\u0636\u0627\u0641\u0629. \u0644\u0623\u0642\u0635\u0649 \u0623\u0645\u0627\u0646\u060c \u0627\u0633\u062a\u062e\u062f\u0645 \u0645\u062a\u063a\u064a\u0631\u0627\u062a \u0627\u0644\u0628\u064a\u0626\u0629 \u0639\u0644\u0649 \u0627\u0644\u062e\u0627\u062f\u0645.",
+          editing_banner: "\u062a\u062d\u0631\u064a\u0631 \u062a\u0643\u0648\u064a\u0646 \u0645\u0648\u062c\u0648\u062f", editing_desc: "\u062a\u0645 \u062a\u062d\u0645\u064a\u0644 \u0625\u0639\u062f\u0627\u062f\u0627\u062a\u0643. \u0639\u062f\u0644\u0647\u0627 \u0648\u0627\u0646\u0642\u0631 \u062a\u062d\u062f\u064a\u062b.",
+          addic7ed: "Addic7ed", opensubtitles: "OpenSubtitles", subdl: "SubDL", subsource: "SubSource",
+          api_key: "\u0645\u0641\u062a\u0627\u062d API", api_key_opt: "\u0645\u0641\u062a\u0627\u062d API (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)", username: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645", password: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631",
+          enabled: "\u0645\u0641\u0639\u0651\u0644", disabled: "\u0645\u0639\u0637\u0651\u0644"
         }
-      });
-    });
-
-    function toggleChip(chip) {
-      var isActive = chip.classList.toggle('active');
-      chip.setAttribute('aria-checked', isActive ? 'true' : 'false');
-    }
-
-    // Determine button label based on whether we're editing existing config
-    var isEditing = window.__INITIAL_CONFIG__ !== null && window.__INITIAL_CONFIG__ !== undefined;
-
-    var generateBtn = document.getElementById('generateBtn');
-    generateBtn.textContent = isEditing ? 'Update Addon' : 'Generate Link';
-
-    if (isEditing) {
-      document.getElementById('editingBanner').style.display = 'block';
-      document.getElementById('stremioLink').textContent = 'Update in Stremio';
-    }
-
-    // Generate button
-    generateBtn.addEventListener('click', generate);
-
-    function generate() {
-      var providers = ['opensubtitles', 'subdl', 'subsource'];
-      var enabledSources = providers.filter(function(p) {
-        return document.getElementById('check_' + p).checked;
-      });
-      var langs = Array.from(document.querySelectorAll('.lang-chip.active')).map(function(c) {
-        return c.dataset.code;
-      });
-
-      if (langs.length === 0) {
-        alert("Please select at least one preferred language!");
-        return;
-      }
-
-      if (enabledSources.length === 0) {
-        alert("Please enable at least one subtitle provider!");
-        return;
-      }
-
-      var config = {
-        opensubtitles_api_key: document.getElementById('key_opensubtitles').value.trim(),
-        subdl_api_key: document.getElementById('key_subdl').value.trim(),
-        subsource_api_key: document.getElementById('key_subsource').value.trim(),
-        languages: langs.join(','),
-        enabled_sources: enabledSources.join(',')
       };
 
-      // Remove empty values
-      Object.keys(config).forEach(function(k) {
-        if (!config[k]) delete config[k];
-      });
-
-      var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-
-      var host = window.location.host;
-      var protocol = window.location.protocol;
-
-      var manifestUrl = protocol + '//' + host + '/' + encoded + '/manifest.json';
-      var installUrl = 'stremio://' + host + '/' + encoded + '/manifest.json';
-
-      document.getElementById('stremioLink').href = installUrl;
-      document.getElementById('manualUrl').innerText = manifestUrl;
-      document.getElementById('result').style.display = 'block';
-    }
-
-    // ===================================================================
-    // Pre-fill Logic: Restore form state from window.__INITIAL_CONFIG__
-    // (server-injected when the user returns via the Stremio Gear icon)
-    // ===================================================================
-    (function prefillForm() {
-      var config = window.__INITIAL_CONFIG__;
-      if (!config || typeof config !== 'object') return;
-
-      // Pre-fill API key fields (only if the config contains non-empty values)
-      var apiKeyFields = {
-        'opensubtitles_api_key': 'key_opensubtitles',
-        'subdl_api_key': 'key_subdl',
-        'subsource_api_key': 'key_subsource'
-      };
-
-      Object.keys(apiKeyFields).forEach(function(configKey) {
-        if (config[configKey]) {
-          document.getElementById(apiKeyFields[configKey]).value = config[configKey];
-        }
-      });
-
-      // Pre-fill enabled source checkboxes
-      if (config.enabled_sources) {
-        var sources = config.enabled_sources.split(',').map(function(s) {
-          return s.trim().toLowerCase();
-        });
-        ['opensubtitles', 'subdl', 'subsource'].forEach(function(provider) {
-          var checkbox = document.getElementById('check_' + provider);
-          if (checkbox) {
-            checkbox.checked = sources.indexOf(provider) !== -1;
-          }
-        });
-      }
-
-      // Pre-fill language chip selections
-      if (config.languages) {
-        var langCodes = config.languages.split(',').map(function(l) {
-          return l.trim().toLowerCase();
-        });
-
-        document.querySelectorAll('.lang-chip').forEach(function(chip) {
-          var code = chip.dataset.code;
-          var shouldActivate = langCodes.indexOf(code) !== -1;
-          if (shouldActivate) {
-            chip.classList.add('active');
-            chip.setAttribute('aria-checked', 'true');
+      // Merge server-provided translations if available
+      if (window.__TRANSLATIONS__ && typeof window.__TRANSLATIONS__ === 'object') {
+        Object.keys(window.__TRANSLATIONS__).forEach(function(lang) {
+          if (DEFAULT_TRANSLATIONS[lang]) {
+            Object.keys(window.__TRANSLATIONS__[lang]).forEach(function(key) {
+              DEFAULT_TRANSLATIONS[lang][key] = window.__TRANSLATIONS__[lang][key];
+            });
           } else {
-            chip.classList.remove('active');
-            chip.setAttribute('aria-checked', 'false');
+            DEFAULT_TRANSLATIONS[lang] = window.__TRANSLATIONS__[lang];
           }
         });
       }
+
+      var currentLang = 'en';
+
+      function t(key) {
+        var langData = DEFAULT_TRANSLATIONS[currentLang];
+        if (langData && langData[key]) return langData[key];
+        if (DEFAULT_TRANSLATIONS.en && DEFAULT_TRANSLATIONS.en[key]) return DEFAULT_TRANSLATIONS.en[key];
+        return key;
+      }
+
+      function applyTranslations() {
+        var isRtl = currentLang === 'ar';
+        document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+        document.documentElement.lang = currentLang;
+
+        document.querySelectorAll('[data-i18n]').forEach(function(el) {
+          var key = el.getAttribute('data-i18n');
+          var translated = t(key);
+          if (translated) el.textContent = translated;
+        });
+
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+          var key = el.getAttribute('data-i18n-placeholder');
+          var translated = t(key);
+          if (translated) el.placeholder = translated;
+        });
+
+        // Update generate button text
+        var genBtn = document.getElementById('btnNext');
+        if (currentStep === 3) {
+          genBtn.textContent = isEditing ? t('update') : t('generate');
+        }
+
+        // Update step labels in progress bar
+        document.getElementById('progStep0').querySelector('.step-label').textContent = t('step_welcome');
+        document.getElementById('progStep1').querySelector('.step-label').textContent = t('step_providers');
+        document.getElementById('progStep2').querySelector('.step-label').textContent = t('step_languages');
+        document.getElementById('progStep3').querySelector('.step-label').textContent = t('step_advanced');
+
+        // Update back button
+        document.getElementById('btnBack').textContent = t('back');
+        document.getElementById('btnBackToWizard').textContent = t('back');
+      }
+
+      function detectLanguage() {
+        var navLang = (navigator.language || navigator.userLanguage || 'en').toLowerCase().slice(0, 2);
+        var supportedLangs = Object.keys(DEFAULT_TRANSLATIONS);
+        if (supportedLangs.indexOf(navLang) !== -1) return navLang;
+        return 'en';
+      }
+
+      function setLanguage(lang) {
+        currentLang = lang;
+        applyTranslations();
+        try { localStorage.setItem('subtitleHub_lang', lang); } catch(e) {}
+      }
+
+      // ===========================
+      // BUILT-IN PRESETS
+      // ===========================
+      var BUILTIN_PRESETS = [
+        { id: "default", name: "Default", desc: "All providers, English", icon: "\uD83C\uDF0D", config: { languages: "eng", enabled_sources: "opensubtitles,subdl,subsource" } },
+        { id: "european", name: "European", desc: "European languages pack", icon: "\uD83C\uDDEA\uD83C\uDDFA", config: { languages: "eng,fre,ger,spa,ita,por", enabled_sources: "opensubtitles,subdl,subsource" } },
+        { id: "nordic", name: "Nordic", desc: "Scandinavian languages", icon: "\u2744\uFE0F", config: { languages: "swe,dan,nor,fin", enabled_sources: "opensubtitles,subdl" } },
+        { id: "anime", name: "Anime", desc: "Japanese + English", icon: "\uD83C\uDFEF", config: { languages: "jpn,eng", enabled_sources: "opensubtitles,subdl" } },
+        { id: "latin", name: "Latin American", desc: "Spanish + Portuguese", icon: "\uD83C\uDF0E", config: { languages: "spa,por,eng", enabled_sources: "opensubtitles,subdl,subsource" } },
+        { id: "balkan", name: "Balkan", desc: "Romanian + neighbors", icon: "\uD83C\uDFD4\uFE0F", config: { languages: "ron,hun,hrv,srp,slv,bul", enabled_sources: "subsource,opensubtitles" } },
+        { id: "asian", name: "Asian", desc: "CJK + SEA languages", icon: "\uD83C\uDF0F", config: { languages: "jpn,kor,chi,tha,vie,ind", enabled_sources: "opensubtitles,subdl" } },
+        { id: "max_coverage", name: "Max Coverage", desc: "All languages, all providers", icon: "\uD83C\uDFAF", config: { languages: "eng,ron,fre,spa,ger,ita,por,gre,hun,ara,jpn,kor,chi,tur,dut,swe", enabled_sources: "opensubtitles,subdl,subsource" } }
+      ];
+
+      var loadedPresets = BUILTIN_PRESETS.slice();
+
+      function loadPresets() {
+        fetch('/api/presets')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data && Array.isArray(data) && data.length > 0) {
+              loadedPresets = data;
+            }
+            renderPresets();
+          })
+          .catch(function() {
+            loadedPresets = BUILTIN_PRESETS.slice();
+            renderPresets();
+          });
+      }
+
+      function renderPresets() {
+        var grid = document.getElementById('presetsGrid');
+        grid.innerHTML = '';
+        loadedPresets.forEach(function(preset) {
+          var card = document.createElement('div');
+          card.className = 'preset-card';
+          card.setAttribute('tabindex', '0');
+          card.setAttribute('role', 'button');
+          card.innerHTML = '<span class="preset-icon">' + escapeHtml(preset.icon) + '</span>' +
+            '<div class="preset-name">' + escapeHtml(preset.name) + '</div>' +
+            '<div class="preset-desc">' + escapeHtml(preset.desc) + '</div>';
+          card.addEventListener('click', function() { applyPreset(preset); });
+          card.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); applyPreset(preset); }
+          });
+          grid.appendChild(card);
+        });
+      }
+
+      function applyPreset(preset) {
+        if (!preset || !preset.config) return;
+        var cfg = preset.config;
+
+        // Apply languages
+        if (cfg.languages) {
+          var langCodes = cfg.languages.split(',').map(function(l) { return l.trim().toLowerCase(); });
+          document.querySelectorAll('#langPicker .lang-chip').forEach(function(chip) {
+            var code = chip.dataset.code;
+            if (langCodes.indexOf(code) !== -1) {
+              chip.classList.add('active');
+              chip.setAttribute('aria-checked', 'true');
+            } else {
+              chip.classList.remove('active');
+              chip.setAttribute('aria-checked', 'false');
+            }
+          });
+        }
+
+        // Apply enabled sources
+        if (cfg.enabled_sources) {
+          var sources = cfg.enabled_sources.split(',').map(function(s) { return s.trim().toLowerCase(); });
+          var allProviders = ['opensubtitles', 'subdl', 'subsource', 'addic7ed'];
+          allProviders.forEach(function(p) {
+            var cb = document.getElementById('check_' + p);
+            if (cb) cb.checked = sources.indexOf(p) !== -1;
+          });
+        }
+
+        // Apply other config values
+        if (cfg.hi_filter === 'true') document.getElementById('hiToggle').checked = true;
+        if (cfg.release_matching === 'true') document.getElementById('releaseToggle').checked = true;
+        if (cfg.mt_fallback === 'true') document.getElementById('mtToggle').checked = true;
+
+        if (cfg.provider_priority) {
+          providerOrder = cfg.provider_priority.split(',').map(function(s) { return s.trim(); });
+          // Ensure all providers are included
+          var allP = getAllProviderIds();
+          allP.forEach(function(p) {
+            if (providerOrder.indexOf(p) === -1) providerOrder.push(p);
+          });
+          renderPriorityList();
+        }
+
+        showToast(t('import_success'), 'success');
+      }
+
+      // ===========================
+      // WIZARD NAVIGATION
+      // ===========================
+      var currentStep = 0;
+      var totalSteps = 4;
+      var isEditing = false;
+      var lastGeneratedUrl = '';
+
+      function goToStep(newStep) {
+        if (newStep < 0 || newStep >= totalSteps) return;
+
+        var oldPanel = document.getElementById('stepPanel' + currentStep);
+        var newPanel = document.getElementById('stepPanel' + newStep);
+
+        // Animate out old panel
+        if (oldPanel) {
+          oldPanel.classList.remove('active');
+          if (newStep > currentStep) {
+            oldPanel.classList.add('exit-left');
+          }
+          // Remove exit class after transition
+          setTimeout(function() {
+            oldPanel.classList.remove('exit-left');
+          }, 400);
+        }
+
+        // Activate new panel
+        if (newPanel) {
+          newPanel.classList.add('active');
+        }
+
+        // Update progress bar
+        for (var i = 0; i < totalSteps; i++) {
+          var step = document.getElementById('progStep' + i);
+          step.classList.remove('active', 'completed');
+          if (i < newStep) step.classList.add('completed');
+          if (i === newStep) step.classList.add('active');
+        }
+
+        // Update lines
+        var lines = ['line01', 'line12', 'line23'];
+        for (var j = 0; j < lines.length; j++) {
+          var line = document.getElementById(lines[j]);
+          if (j < newStep) {
+            line.classList.add('filled');
+          } else {
+            line.classList.remove('filled');
+          }
+        }
+
+        // Update nav buttons
+        var btnBack = document.getElementById('btnBack');
+        var btnNext = document.getElementById('btnNext');
+
+        btnBack.style.display = newStep === 0 ? 'none' : 'block';
+        if (newStep === totalSteps - 1) {
+          btnNext.textContent = isEditing ? t('update') : t('generate');
+          btnNext.className = 'btn-nav btn-generate';
+        } else {
+          btnNext.textContent = t('next');
+          btnNext.className = 'btn-nav btn-next';
+        }
+
+        currentStep = newStep;
+      }
+
+      document.getElementById('btnNext').addEventListener('click', function() {
+        if (currentStep === totalSteps - 1) {
+          generateLink();
+        } else {
+          goToStep(currentStep + 1);
+        }
+      });
+
+      document.getElementById('btnBack').addEventListener('click', function() {
+        if (currentStep > 0) goToStep(currentStep - 1);
+      });
+
+      document.getElementById('btnBackToWizard').addEventListener('click', function() {
+        document.getElementById('resultWrapper').style.display = 'none';
+        document.querySelector('.wizard-footer').style.display = 'flex';
+        document.getElementById('result').style.display = 'none';
+      });
+
+      // Clickable progress steps (navigate to already visited steps)
+      document.querySelectorAll('.progress-step').forEach(function(step) {
+        step.addEventListener('click', function() {
+          var targetStep = parseInt(step.getAttribute('data-step'));
+          if (targetStep < currentStep) {
+            goToStep(targetStep);
+          }
+        });
+        step.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            var targetStep = parseInt(step.getAttribute('data-step'));
+            if (targetStep < currentStep) {
+              goToStep(targetStep);
+            }
+          }
+        });
+      });
+
+      // ===========================
+      // LANGUAGE CHIPS
+      // ===========================
+      document.querySelectorAll('#langPicker .lang-chip').forEach(function(chip) {
+        chip.addEventListener('click', function() { toggleChip(chip); });
+        chip.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleChip(chip); }
+        });
+      });
+
+      function toggleChip(chip) {
+        var isActive = chip.classList.toggle('active');
+        chip.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      }
+
+      // ===========================
+      // PROVIDER PRIORITY (DRAG & DROP)
+      // ===========================
+      var providerOrder = ['opensubtitles', 'subdl', 'subsource', 'addic7ed'];
+      var providerNames = {
+        opensubtitles: 'OpenSubtitles',
+        subdl: 'SubDL',
+        subsource: 'SubSource',
+        addic7ed: 'Addic7ed'
+      };
+
+      function getAllProviderIds() {
+        return Object.keys(providerNames);
+      }
+
+      function getEnabledProviderIds() {
+        return getAllProviderIds().filter(function(id) {
+          var cb = document.getElementById('check_' + id);
+          return cb && cb.checked;
+        });
+      }
+
+      function renderPriorityList() {
+        var list = document.getElementById('priorityList');
+        list.innerHTML = '';
+        var enabledProviders = getEnabledProviderIds();
+        // Order enabled providers according to providerOrder
+        var ordered = enabledProviders.sort(function(a, b) {
+          return providerOrder.indexOf(a) - providerOrder.indexOf(b);
+        });
+
+        ordered.forEach(function(id, index) {
+          var li = document.createElement('li');
+          li.className = 'priority-item';
+          li.setAttribute('draggable', 'true');
+          li.setAttribute('data-provider', id);
+          li.setAttribute('role', 'option');
+          li.setAttribute('aria-grabbed', 'false');
+          li.innerHTML =
+            '<span class="priority-handle" aria-hidden="true">\u2630</span>' +
+            '<span class="priority-num">' + (index + 1) + '</span>' +
+            '<span class="priority-name">' + escapeHtml(providerNames[id] || id) + '</span>';
+
+          // Drag events
+          li.addEventListener('dragstart', handleDragStart);
+          li.addEventListener('dragend', handleDragEnd);
+          li.addEventListener('dragover', handleDragOver);
+          li.addEventListener('dragenter', handleDragEnter);
+          li.addEventListener('dragleave', handleDragLeave);
+          li.addEventListener('drop', handleDrop);
+
+          list.appendChild(li);
+        });
+
+        // Update providerOrder to match current enabled list order
+        providerOrder = ordered.slice();
+      }
+
+      var dragSrcEl = null;
+
+      function handleDragStart(e) {
+        dragSrcEl = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.getAttribute('data-provider'));
+      }
+
+      function handleDragEnd() {
+        this.classList.remove('dragging');
+        document.querySelectorAll('.priority-item').forEach(function(item) {
+          item.classList.remove('drag-over');
+        });
+      }
+
+      function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      }
+
+      function handleDragEnter(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+      }
+
+      function handleDragLeave() {
+        this.classList.remove('drag-over');
+      }
+
+      function handleDrop(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        if (dragSrcEl !== this) {
+          this.classList.remove('drag-over');
+
+          // Swap in the DOM
+          var parent = this.parentNode;
+          var dragSrcIndex = Array.prototype.indexOf.call(parent.children, dragSrcEl);
+          var dropIndex = Array.prototype.indexOf.call(parent.children, this);
+
+          if (dragSrcIndex < dropIndex) {
+            parent.insertBefore(dragSrcEl, this.nextSibling);
+          } else {
+            parent.insertBefore(dragSrcEl, this);
+          }
+
+          // Rebuild providerOrder from DOM order
+          var items = document.querySelectorAll('#priorityList .priority-item');
+          var newOrder = [];
+          items.forEach(function(item) {
+            newOrder.push(item.getAttribute('data-provider'));
+          });
+          providerOrder = newOrder;
+
+          // Re-render to update numbers
+          renderPriorityList();
+        }
+      }
+
+      // Listen for provider checkbox changes to update priority list
+      getAllProviderIds().forEach(function(id) {
+        var cb = document.getElementById('check_' + id);
+        if (cb) {
+          cb.addEventListener('change', function() {
+            renderPriorityList();
+          });
+        }
+      });
+
+      // ===========================
+      // CONFIGURATION PROFILES
+      // ===========================
+      var PROFILES_KEY = 'subtitleHub_profiles';
+      var MAX_PROFILES = 10;
+
+      function getProfiles() {
+        try {
+          var raw = localStorage.getItem(PROFILES_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch(e) { return []; }
+      }
+
+      function saveProfiles(profiles) {
+        try { localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)); } catch(e) {}
+      }
+
+      function collectCurrentConfig() {
+        var enabledSources = getAllProviderIds().filter(function(p) {
+          var cb = document.getElementById('check_' + p);
+          return cb && cb.checked;
+        });
+
+        var langs = Array.from(document.querySelectorAll('#langPicker .lang-chip.active')).map(function(c) {
+          return c.dataset.code;
+        });
+
+        return {
+          languages: langs.join(','),
+          enabled_sources: enabledSources.join(','),
+          opensubtitles_api_key: document.getElementById('key_opensubtitles').value.trim(),
+          subdl_api_key: document.getElementById('key_subdl').value.trim(),
+          subsource_api_key: document.getElementById('key_subsource').value.trim(),
+          addic7ed_username: document.getElementById('addic7ed_username').value.trim(),
+          addic7ed_password: document.getElementById('addic7ed_password').value.trim(),
+          hi_filter: document.getElementById('hiToggle').checked ? 'true' : 'false',
+          release_matching: document.getElementById('releaseToggle').checked ? 'true' : 'false',
+          mt_fallback: document.getElementById('mtToggle').checked ? 'true' : 'false',
+          provider_priority: providerOrder.join(',')
+        };
+      }
+
+      function applyConfig(cfg) {
+        if (!cfg || typeof cfg !== 'object') return;
+
+        // API keys
+        if (cfg.opensubtitles_api_key) document.getElementById('key_opensubtitles').value = cfg.opensubtitles_api_key;
+        if (cfg.subdl_api_key) document.getElementById('key_subdl').value = cfg.subdl_api_key;
+        if (cfg.subsource_api_key) document.getElementById('key_subsource').value = cfg.subsource_api_key;
+        if (cfg.addic7ed_username) document.getElementById('addic7ed_username').value = cfg.addic7ed_username;
+        if (cfg.addic7ed_password) document.getElementById('addic7ed_password').value = cfg.addic7ed_password;
+
+        // Enabled sources
+        if (cfg.enabled_sources) {
+          var sources = cfg.enabled_sources.split(',').map(function(s) { return s.trim().toLowerCase(); });
+          getAllProviderIds().forEach(function(p) {
+            var cb = document.getElementById('check_' + p);
+            if (cb) cb.checked = sources.indexOf(p) !== -1;
+          });
+        }
+
+        // Languages
+        if (cfg.languages) {
+          var langCodes = cfg.languages.split(',').map(function(l) { return l.trim().toLowerCase(); });
+          document.querySelectorAll('#langPicker .lang-chip').forEach(function(chip) {
+            var code = chip.dataset.code;
+            if (langCodes.indexOf(code) !== -1) {
+              chip.classList.add('active');
+              chip.setAttribute('aria-checked', 'true');
+            } else {
+              chip.classList.remove('active');
+              chip.setAttribute('aria-checked', 'false');
+            }
+          });
+        }
+
+        // Toggles
+        if (cfg.hi_filter === 'true') document.getElementById('hiToggle').checked = true;
+        else document.getElementById('hiToggle').checked = false;
+        if (cfg.release_matching === 'true') document.getElementById('releaseToggle').checked = true;
+        else document.getElementById('releaseToggle').checked = false;
+        if (cfg.mt_fallback === 'true') document.getElementById('mtToggle').checked = true;
+        else document.getElementById('mtToggle').checked = false;
+
+        // Provider priority
+        if (cfg.provider_priority) {
+          providerOrder = cfg.provider_priority.split(',').map(function(s) { return s.trim(); });
+          // Ensure all providers are present
+          getAllProviderIds().forEach(function(p) {
+            if (providerOrder.indexOf(p) === -1) providerOrder.push(p);
+          });
+        }
+
+        renderPriorityList();
+      }
+
+      function renderProfiles() {
+        var profiles = getProfiles();
+        var list = document.getElementById('profilesList');
+        list.innerHTML = '';
+
+        if (profiles.length === 0) {
+          list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">' +
+            t('profile_new') + '</div>';
+          return;
+        }
+
+        profiles.forEach(function(profile, idx) {
+          var item = document.createElement('div');
+          item.className = 'profile-item';
+
+          var nameSpan = document.createElement('span');
+          nameSpan.className = 'profile-item-name';
+          nameSpan.textContent = profile.name;
+
+          var timeSpan = document.createElement('span');
+          timeSpan.className = 'profile-item-time';
+          timeSpan.textContent = formatTime(profile.timestamp);
+
+          var actionsDiv = document.createElement('div');
+          actionsDiv.className = 'profile-actions';
+
+          var switchBtn = document.createElement('button');
+          switchBtn.className = 'btn-sm btn-primary-sm';
+          switchBtn.type = 'button';
+          switchBtn.textContent = t('profile_switch');
+          switchBtn.addEventListener('click', function() {
+            applyConfig(profile.config);
+            showToast(t('import_success'), 'success');
+          });
+
+          var deleteBtn = document.createElement('button');
+          deleteBtn.className = 'btn-sm btn-danger-sm';
+          deleteBtn.type = 'button';
+          deleteBtn.textContent = t('profile_delete');
+          deleteBtn.addEventListener('click', function() {
+            profiles.splice(idx, 1);
+            saveProfiles(profiles);
+            renderProfiles();
+          });
+
+          actionsDiv.appendChild(switchBtn);
+          actionsDiv.appendChild(deleteBtn);
+
+          item.appendChild(nameSpan);
+          item.appendChild(timeSpan);
+          item.appendChild(actionsDiv);
+          list.appendChild(item);
+        });
+      }
+
+      function formatTime(ts) {
+        if (!ts) return '';
+        var d = new Date(ts);
+        var now = new Date();
+        var diffMs = now - d;
+        var diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'just now';
+        if (diffMins < 60) return diffMins + 'm ago';
+        var diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return diffHours + 'h ago';
+        var diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 30) return diffDays + 'd ago';
+        return d.toLocaleDateString();
+      }
+
+      document.getElementById('btnSaveProfile').addEventListener('click', function() {
+        var nameInput = document.getElementById('profileNameInput');
+        var name = nameInput.value.trim();
+        if (!name) {
+          showToast(t('profile_name_ph'), 'error');
+          return;
+        }
+
+        var profiles = getProfiles();
+        var config = collectCurrentConfig();
+
+        profiles.push({
+          name: name,
+          config: config,
+          timestamp: Date.now()
+        });
+
+        // FIFO eviction if > MAX_PROFILES
+        while (profiles.length > MAX_PROFILES) {
+          profiles.shift();
+        }
+
+        saveProfiles(profiles);
+        nameInput.value = '';
+        renderProfiles();
+        showToast(t('import_success'), 'success');
+      });
+
+      // ===========================
+      // CONFIG IMPORT / EXPORT
+      // ===========================
+      document.getElementById('btnExport').addEventListener('click', function() {
+        var config = collectCurrentConfig();
+        var blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'subtitle-hub-config.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('btnImport').addEventListener('click', function() {
+        document.getElementById('importFileInput').click();
+      });
+
+      document.getElementById('importFileInput').addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          try {
+            var parsed = JSON.parse(ev.target.result);
+            if (!parsed || typeof parsed !== 'object') {
+              showToast(t('import_error'), 'error');
+              return;
+            }
+            // Validate required-ish fields
+            if (!parsed.languages && !parsed.enabled_sources && !parsed.provider_priority) {
+              showToast(t('import_error'), 'error');
+              return;
+            }
+            applyConfig(parsed);
+            showToast(t('import_success'), 'success');
+          } catch(err) {
+            showToast(t('import_error'), 'error');
+          }
+        };
+        reader.readAsText(file);
+        // Reset the file input so the same file can be re-selected
+        e.target.value = '';
+      });
+
+      // ===========================
+      // TOAST NOTIFICATION SYSTEM
+      // ===========================
+      function showToast(message, type) {
+        var container = document.getElementById('toastContainer');
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + (type || 'success');
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        setTimeout(function() {
+          toast.classList.add('toast-exit');
+          setTimeout(function() {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+          }, 300);
+        }, 3000);
+      }
+
+      // ===========================
+      // LINK GENERATION
+      // ===========================
+      function generateLink() {
+        var enabledSources = getAllProviderIds().filter(function(p) {
+          var cb = document.getElementById('check_' + p);
+          return cb && cb.checked;
+        });
+
+        var langs = Array.from(document.querySelectorAll('#langPicker .lang-chip.active')).map(function(c) {
+          return c.dataset.code;
+        });
+
+        if (langs.length === 0) {
+          showToast(t('no_langs'), 'error');
+          return;
+        }
+
+        if (enabledSources.length === 0) {
+          showToast(t('no_providers'), 'error');
+          return;
+        }
+
+        var config = {
+          languages: langs.join(','),
+          enabled_sources: enabledSources.join(','),
+          opensubtitles_api_key: document.getElementById('key_opensubtitles').value.trim(),
+          subdl_api_key: document.getElementById('key_subdl').value.trim(),
+          subsource_api_key: document.getElementById('key_subsource').value.trim(),
+          addic7ed_username: document.getElementById('addic7ed_username').value.trim(),
+          addic7ed_password: document.getElementById('addic7ed_password').value.trim(),
+          hi_filter: document.getElementById('hiToggle').checked ? 'true' : 'false',
+          release_matching: document.getElementById('releaseToggle').checked ? 'true' : 'false',
+          mt_fallback: document.getElementById('mtToggle').checked ? 'true' : 'false',
+          provider_priority: providerOrder.join(',')
+        };
+
+        // Remove empty / false values
+        Object.keys(config).forEach(function(k) {
+          if (!config[k] || config[k] === 'false') delete config[k];
+        });
+
+        var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+
+        var host = window.location.host;
+        var protocol = window.location.protocol;
+
+        var manifestUrl = protocol + '//' + host + '/' + encoded + '/manifest.json';
+        var installUrl = 'stremio://' + host + '/' + encoded + '/manifest.json';
+
+        lastGeneratedUrl = manifestUrl;
+
+        document.getElementById('stremioLink').href = installUrl;
+        document.getElementById('stremioLink').textContent = isEditing ? t('update') : t('install_stremio');
+        document.getElementById('manualUrl').innerText = manifestUrl;
+
+        // Show result panel, hide wizard nav
+        document.querySelector('.wizard-footer').style.display = 'none';
+        document.getElementById('resultWrapper').style.display = 'block';
+        document.getElementById('result').style.display = 'block';
+
+        // Try to shorten the URL
+        shortenUrl(manifestUrl);
+      }
+
+      // ===========================
+      // SHORT URL SHARING
+      // ===========================
+      function shortenUrl(url) {
+        var shortSection = document.getElementById('shortUrlSection');
+        var shortDisplay = document.getElementById('shortUrlDisplay');
+        shortSection.style.display = 'none';
+
+        fetch('/api/shorten', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: url })
+        })
+        .then(function(r) {
+          if (!r.ok) throw new Error('Shortening failed');
+          return r.json();
+        })
+        .then(function(data) {
+          if (data && data.short_url) {
+            shortDisplay.innerText = data.short_url;
+            shortSection.style.display = 'block';
+          }
+        })
+        .catch(function() {
+          // Shortening failed - full URL is already shown
+        });
+      }
+
+      // Copy buttons
+      document.getElementById('btnCopyFull').addEventListener('click', function() {
+        copyToClipboard(document.getElementById('manualUrl').innerText);
+      });
+
+      document.getElementById('btnCopyShort').addEventListener('click', function() {
+        copyToClipboard(document.getElementById('shortUrlDisplay').innerText);
+      });
+
+      function copyToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function() {
+            showToast('Copied!', 'success');
+          });
+        } else {
+          var textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          try {
+            document.execCommand('copy');
+            showToast('Copied!', 'success');
+          } catch(e) {}
+          document.body.removeChild(textarea);
+        }
+      }
+
+      // ===========================
+      // PRE-FILL FROM URL
+      // ===========================
+      function prefillFromConfig() {
+        var config = window.__INITIAL_CONFIG__;
+        if (!config || typeof config !== 'object') {
+          isEditing = false;
+          return;
+        }
+
+        isEditing = true;
+        applyConfig(config);
+
+        // Show editing banner
+        document.getElementById('editingBanner').style.display = 'block';
+
+        // Change generate button text
+        var btnNext = document.getElementById('btnNext');
+        if (currentStep === totalSteps - 1) {
+          btnNext.textContent = t('update');
+        }
+      }
+
+      // ===========================
+      // UTILITY FUNCTIONS
+      // ===========================
+      function escapeHtml(str) {
+        if (!str) return '';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+      }
+
+      // ===========================
+      // INITIALIZATION
+      // ===========================
+      function init() {
+        // Detect and set language
+        var savedLang = null;
+        try { savedLang = localStorage.getItem('subtitleHub_lang'); } catch(e) {}
+        if (savedLang && DEFAULT_TRANSLATIONS[savedLang]) {
+          setLanguage(savedLang);
+        } else {
+          var detected = detectLanguage();
+          setLanguage(detected);
+        }
+
+        // Set language dropdown
+        document.getElementById('pageLangSelect').value = currentLang;
+
+        // Language dropdown listener
+        document.getElementById('pageLangSelect').addEventListener('change', function() {
+          setLanguage(this.value);
+          renderPriorityList();
+          renderProfiles();
+        });
+
+        // Load presets
+        loadPresets();
+
+        // Render priority list
+        renderPriorityList();
+
+        // Render profiles
+        renderProfiles();
+
+        // Pre-fill from URL if editing
+        prefillFromConfig();
+
+        // Set initial wizard state
+        goToStep(0);
+      }
+
+      init();
     })();
   </script>
 </body>
