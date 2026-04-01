@@ -309,6 +309,8 @@ app.get('/:segment/manifest.json', (req, res) => {
   // Build configurationURL pointing to the configure page with the same config segment
   if (req.userConfig) {
     manifest.behaviorHints.configurationURL = `${protocol}://${host}/${req.configSegment}/configure`;
+    // Config is present in the URL — allow installation, no longer require configuration
+    manifest.behaviorHints.configurationRequired = false;
   } else {
     manifest.behaviorHints.configurationURL = `${protocol}://${host}/configure`;
   }
