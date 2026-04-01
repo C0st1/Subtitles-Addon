@@ -78,6 +78,30 @@
       display: block;
     }
 
+    /* Editing Mode Banner */
+    .editing-banner {
+      background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #c4b5fd;
+      display: none;
+    }
+    .editing-banner strong {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-size: 14px;
+      color: #ddd6fe;
+    }
+    .editing-banner svg {
+      flex-shrink: 0;
+    }
+
     /* Security Warning Banner */
     .security-warning {
       background: var(--warning-bg);
@@ -356,6 +380,19 @@
     </div>
 
     <div class="content">
+      <!-- Editing Mode Banner (shown when returning via Gear icon with existing config) -->
+      <div class="editing-banner" id="editingBanner" role="status">
+        <strong>
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          Editing Existing Configuration
+        </strong>
+        Your current settings have been loaded below. Modify them and click
+        "Update Addon" to apply the changes in Stremio.
+      </div>
+
       <!-- Security Warning -->
       <div class="security-warning" role="alert">
         <strong>Security Notice</strong>
@@ -472,6 +509,11 @@
     </div>
   </div>
 
+  <!-- Initial config injection (set by server for pre-fill when user returns via Gear icon) -->
+  <script nonce="{{CSP_NONCE}}">
+    window.__INITIAL_CONFIG__ = {{INITIAL_CONFIG}};
+  </script>
+
   <!-- Inline script (CSP nonce is injected by server) -->
   <script nonce="{{CSP_NONCE}}">
     // Language chip interaction with keyboard and click support
@@ -490,8 +532,19 @@
       chip.setAttribute('aria-checked', isActive ? 'true' : 'false');
     }
 
+    // Determine button label based on whether we're editing existing config
+    var isEditing = window.__INITIAL_CONFIG__ !== null && window.__INITIAL_CONFIG__ !== undefined;
+
+    var generateBtn = document.getElementById('generateBtn');
+    generateBtn.textContent = isEditing ? 'Update Addon' : 'Generate Link';
+
+    if (isEditing) {
+      document.getElementById('editingBanner').style.display = 'block';
+      document.getElementById('stremioLink').textContent = 'Update in Stremio';
+    }
+
     // Generate button
-    document.getElementById('generateBtn').addEventListener('click', generate);
+    generateBtn.addEventListener('click', generate);
 
     function generate() {
       var providers = ['opensubtitles', 'subdl', 'subsource'];
@@ -540,6 +593,60 @@
       document.getElementById('manualUrl').innerText = manifestUrl;
       document.getElementById('result').style.display = 'block';
     }
+
+    // ===================================================================
+    // Pre-fill Logic: Restore form state from window.__INITIAL_CONFIG__
+    // (server-injected when the user returns via the Stremio Gear icon)
+    // ===================================================================
+    (function prefillForm() {
+      var config = window.__INITIAL_CONFIG__;
+      if (!config || typeof config !== 'object') return;
+
+      // Pre-fill API key fields (only if the config contains non-empty values)
+      var apiKeyFields = {
+        'opensubtitles_api_key': 'key_opensubtitles',
+        'subdl_api_key': 'key_subdl',
+        'subsource_api_key': 'key_subsource'
+      };
+
+      Object.keys(apiKeyFields).forEach(function(configKey) {
+        if (config[configKey]) {
+          document.getElementById(apiKeyFields[configKey]).value = config[configKey];
+        }
+      });
+
+      // Pre-fill enabled source checkboxes
+      if (config.enabled_sources) {
+        var sources = config.enabled_sources.split(',').map(function(s) {
+          return s.trim().toLowerCase();
+        });
+        ['opensubtitles', 'subdl', 'subsource'].forEach(function(provider) {
+          var checkbox = document.getElementById('check_' + provider);
+          if (checkbox) {
+            checkbox.checked = sources.indexOf(provider) !== -1;
+          }
+        });
+      }
+
+      // Pre-fill language chip selections
+      if (config.languages) {
+        var langCodes = config.languages.split(',').map(function(l) {
+          return l.trim().toLowerCase();
+        });
+
+        document.querySelectorAll('.lang-chip').forEach(function(chip) {
+          var code = chip.dataset.code;
+          var shouldActivate = langCodes.indexOf(code) !== -1;
+          if (shouldActivate) {
+            chip.classList.add('active');
+            chip.setAttribute('aria-checked', 'true');
+          } else {
+            chip.classList.remove('active');
+            chip.setAttribute('aria-checked', 'false');
+          }
+        });
+      }
+    })();
   </script>
 </body>
 </html>
