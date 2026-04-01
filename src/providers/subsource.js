@@ -116,11 +116,14 @@ module.exports = async (params) => {
 
             const payload = Buffer.from(JSON.stringify({ subtitleId: String(sub.subtitleId) })).toString('base64url');
 
+            const rawRelease = sub.releaseInfo ?? sub.releaseName ?? '';
+            const releaseName = typeof rawRelease === 'string' ? rawRelease : (rawRelease != null ? String(rawRelease) : '');
+
             results.push({
               id: payload,
               lang: isoLang,
               provider: 'subsource',
-              releaseName: sub.releaseInfo || sub.releaseName || '',
+              releaseName,
               downloads: sub.downloads || 0,
             });
           }

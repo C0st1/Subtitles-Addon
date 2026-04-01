@@ -162,13 +162,13 @@ module.exports = async (req, res) => {
 
         // New v1 API: download returns ZIP directly (no intermediate URL)
         // Support both new format {subtitleId} and legacy format {id, slug, lang}
-        const subtitleId = payload.subtitleId || payload.id;
-        if (!subtitleId) {
+        const subId = payload.subtitleId || payload.id;
+        if (!subId) {
           return sendError(res, 400, 'Invalid SubSource subtitle ID.');
         }
 
         const dlRes = await http.get(
-          `https://api.subsource.net/api/v1/subtitles/${subtitleId}/download`,
+          `https://api.subsource.net/api/v1/subtitles/${subId}/download`,
           {
             headers: {
               'X-API-Key': apiKey,

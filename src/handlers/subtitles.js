@@ -84,7 +84,7 @@ async function withTimeout(fn, ms) {
  * Strips quality/source tags and normalizes separators.
  */
 function normalizeReleaseName(name) {
-  if (!name) return '';
+  if (!name || typeof name !== 'string') return '';
   return name.toLowerCase()
     .replace(/[.\-_]/g, ' ')
     .replace(/\b(webscr|webrip|webdl|web-dl|blueray|bluray|remux|hdtv|hdr|hdcam|cam|ts|proper|repack|internal)\b/g, '')
@@ -187,7 +187,7 @@ module.exports = async (args) => {
     // HI (Hearing Impaired) filtering — remove if toggle is OFF (default)
     if (!includeHI) {
       subtitles = subtitles.filter(sub => {
-        if (sub.releaseName) {
+        if (sub.releaseName && typeof sub.releaseName === 'string') {
           const rn = sub.releaseName.toLowerCase();
           return !rn.includes('hi.') &&
             !rn.includes('hi ') &&
