@@ -95,8 +95,8 @@ module.exports = async (req, res) => {
         subBuffer = Buffer.from(fileRes.data);
 
         // Unpack ZIP or RAR archives
-        if (isZip(subBuffer) || isRar(subBuffer)) {
-          subBuffer = await extractSrt(subBuffer, payload.lang);
+        if (isZipBuffer(subBuffer) || isRarBuffer(subBuffer)) {
+        subBuffer = await extractSrt(subBuffer, payload.lang);
         }
         break;
       }
@@ -118,9 +118,9 @@ module.exports = async (req, res) => {
         const fileRes = await http.get(dlRes.data.subUrl, { responseType: 'arraybuffer' });
         subBuffer = Buffer.from(fileRes.data);
 
-        if (isZip(subBuffer) || isRar(subBuffer)) {
-          subBuffer = await extractSrt(subBuffer, payload.lang);
-        }
+        if (isZipBuffer(subBuffer) || isRarBuffer(subBuffer)) {
+        subBuffer = await extractSrt(subBuffer, payload.lang);
+      }
         break;
       }
 
