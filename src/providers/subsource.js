@@ -29,7 +29,7 @@ function normalizeTitle(title) {
  * Queries SubSource API for subtitles. Falls back to Cinemeta for title resolution.
  */
 module.exports = async (params) => {
-  const { imdbIdFull, season, type, languages, config, title: providedTitle } = params;
+  const { imdbIdFull, season, episode, type, languages, config, title: providedTitle } = params;
   const apiKey = config.subsource_api_key || process.env.SUBSOURCE_API_KEY;
 
   const ssLangs = languages.map(l => toProviderCode(l, 'subsource')).filter(Boolean);
@@ -76,13 +76,19 @@ module.exports = async (params) => {
 
     const movieSlug = match.folderName;
 
+    // FIX: include episode for series (previously only season was sent)
+    const getPayload = {
+      movieName: movieSlug,
+      langs: ssLangs,
+    };
+    if (type === 'series') {
+      getPayload.season = season;
+      getPayload.episode = episode;
+    }
+
     const getRes = await http.post(
       'https://api.subsource.net/api/getMovie',
-      {
-        movieName: movieSlug,
-        langs: ssLangs,
-        season: type === 'series' ? season : undefined
-      },
+      getPayload,
       { headers }
     );
 
