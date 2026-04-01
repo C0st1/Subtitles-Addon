@@ -1,6 +1,6 @@
 'use strict';
 
-const LRU = require('lru-cache');
+const { LRUCache } = require('lru-cache');
 const logger = require('../utils/logger');
 const { srtToVtt, decodeSrt } = require('../utils/converter');
 const { extractSrt, isArchive } = require('../utils/zip');
@@ -8,7 +8,7 @@ const { http } = require('../utils/http');
 const { validateUrlSync } = require('../utils/url-validator');
 
 // Ephemeral L2 Cache with both entry count and total size limits
-const cache = new LRU({
+const cache = new LRUCache({
   max: 500,
   maxSize: 50 * 1024 * 1024, // 50MB total cache size
   sizeCalculation: (value) => typeof value === 'string' ? Buffer.byteLength(value, 'utf8') : 0,
