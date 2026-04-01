@@ -8,12 +8,14 @@ const dns = require('dns').promises;
 const ALLOWED_DOMAINS = [
   'dl.subdl.com',
   'api.opensubtitles.com',
+  'www.opensubtitles.com',
   'api.subsource.net'
 ];
 
 // Allowlisted domains for any HTTP request (broader, for API calls)
 const API_ALLOWED_DOMAINS = [
   'api.opensubtitles.com',
+  'www.opensubtitles.com',
   'api.subdl.com',
   'api.subsource.net',
   'v3-cinemeta.strem.io'
