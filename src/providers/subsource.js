@@ -4,29 +4,33 @@ const { http } = require('../utils/http');
 const { toProviderCode, fromProviderCode } = require('../config/languages');
 const logger = require('../utils/logger');
 
-const SUBSOURCE_API_BASE = 'https://api.subsource.net/api/v1';
+/**
+ * Normalize a title for fuzzy comparison.
+ * Removes year suffixes like (2024), leading/trailing whitespace, and common articles.
+ * @param {string} title
+ * @returns {string}
+ */
+function normalizeTitle(title) {
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\(\d{4}\)\s*$/, '')   // Remove year suffix: "The Matrix (1999)" -> "the matrix"
+    .replace(/^the\s+/i, '')            // Remove leading "The"
+    .replace(/^a\s+/i, '')             // Remove leading "A"
+    .replace(/^an\s+/i, '')            // Remove leading "An"
+    .replace(/['']/g, '')              // Remove curly/smart quotes
+    .replace(/[^a-z0-9\s]/g, '')       // Remove non-alphanumeric except spaces
+    .replace(/\s+/g, ' ')              // Normalize whitespace
+    .trim();
+}
 
 /**
- * SubSource Provider (v1 API)
- *
- * SubSource migrated from their old POST-based API to a proper REST v1 API.
- * Key changes from the old API:
- *   - Auth header: `X-API-Key` (was `apiKey`)
- *   - Search: GET by IMDB ID (was POST with title)
- *   - Subtitles: paginated GET with full language names
- *   - Download: returns ZIP directly (was a URL to follow)
- *
- * Language codes use full lowercase English names: "english", "romanian", etc.
- * (already mapped correctly in config/languages.js)
+ * SubSource Provider
+ * Queries SubSource API for subtitles. Falls back to Cinemeta for title resolution.
  */
 module.exports = async (params) => {
-  const { imdbIdFull, season, episode, type, languages, config } = params;
+  const { imdbIdFull, season, episode, type, languages, config, title: providedTitle } = params;
   const apiKey = config.subsource_api_key || process.env.SUBSOURCE_API_KEY;
-
-  if (!apiKey) {
-    logger.warn('subsource', 'No API key configured, skipping provider');
-    return [];
-  }
 
   const ssLangs = languages.map(l => toProviderCode(l, 'subsource')).filter(Boolean);
   if (!ssLangs.length) {
@@ -34,115 +38,84 @@ module.exports = async (params) => {
     return [];
   }
 
-  const headers = {
-    'X-API-Key': apiKey,
-    'Accept': 'application/json',
-  };
+  let title = providedTitle;
+  if (!title) {
+    try {
+      // Use shared http client instead of raw axios (consistent timeout, User-Agent, connection pooling)
+      const metaRes = await http.get(
+        `https://v3-cinemeta.strem.io/meta/${type}/${imdbIdFull}.json`
+      );
+      title = metaRes.data?.meta?.name;
+    } catch (e) {
+      logger.warn('subsource', `Cinemeta lookup failed: ${e.message}`);
+      return [];
+    }
+  }
+
+  if (!title) return [];
+
+  const headers = apiKey ? { 'apiKey': apiKey } : {};
 
   try {
-    // Step 1: Search by IMDB ID to get movieId
-    const searchRes = await http.get(`${SUBSOURCE_API_BASE}/movies/search`, {
-      params: { searchType: 'imdb', imdb: imdbIdFull },
-      headers,
-      timeout: 8000,
-    });
+    const searchRes = await http.post(
+      'https://api.subsource.net/api/searchMovie',
+      { query: title },
+      { headers }
+    );
 
-    const movieData = searchRes?.data?.data;
-    if (!movieData) {
-      logger.warn('subsource', `No results found for IMDB: ${imdbIdFull}`);
-      return [];
+    // Fuzzy title matching: try exact match first, then normalized comparison
+    const found = searchRes?.data?.found || [];
+    const normalizedTitle = normalizeTitle(title);
+    let match = found.find(m => m.title?.toLowerCase() === title.toLowerCase());
+
+    if (!match) {
+      match = found.find(m => normalizeTitle(m.title) === normalizedTitle);
     }
 
-    // Movies: single object with movieId
-    // Series: array of objects, one per season, each with movieId + season number
-    let movieId;
+    if (!match) return [];
 
-    if (Array.isArray(movieData)) {
-      // TV series — find matching season
-      if (type === 'series' && season) {
-        const seasonNum = parseInt(season, 10);
-        const seasonMatch = movieData.find(m => m.season === seasonNum);
-        movieId = seasonMatch ? seasonMatch.movieId : movieData[0]?.movieId;
-      } else {
-        movieId = movieData[0]?.movieId;
-      }
-    } else {
-      movieId = movieData.movieId;
+    const movieSlug = match.folderName;
+
+    // FIX: include episode for series (previously only season was sent)
+    const getPayload = {
+      movieName: movieSlug,
+      langs: ssLangs,
+    };
+    if (type === 'series') {
+      getPayload.season = season;
+      getPayload.episode = episode;
     }
 
-    if (!movieId) {
-      logger.warn('subsource', `Could not resolve movieId for IMDB: ${imdbIdFull}`);
-      return [];
-    }
+    const getRes = await http.post(
+      'https://api.subsource.net/api/getMovie',
+      getPayload,
+      { headers }
+    );
 
-    // Step 2: Fetch subtitles for each requested language
     const results = [];
 
-    for (const ssLang of ssLangs) {
-      try {
-        let page = 1;
-        let hasMore = true;
+    for (const sub of getRes?.data?.subs || []) {
+      const isoLang = fromProviderCode(sub.lang, 'subsource');
+      if (!isoLang) continue;
 
-        while (hasMore) {
-          const subsRes = await http.get(`${SUBSOURCE_API_BASE}/subtitles`, {
-            params: {
-              movieId,
-              limit: 100,
-              page,
-              language: ssLang,
-            },
-            headers,
-            timeout: 8000,
-          });
+      const payload = Buffer.from(JSON.stringify({
+        id: sub.subId,
+        slug: movieSlug,
+        lang: sub.lang
+      })).toString('base64url');
 
-          // Handle response structure: { data: { subtitles: [...], pagination: { pages: N } } }
-          // or flat: { data: [...] }
-          const responseData = subsRes?.data?.data;
-          let subtitles = [];
-          let pagination = null;
-
-          if (Array.isArray(responseData)) {
-            subtitles = responseData;
-          } else if (responseData && typeof responseData === 'object') {
-            subtitles = responseData.subtitles || [];
-            pagination = responseData.pagination || null;
-          }
-
-          for (const sub of subtitles) {
-            if (!sub.subtitleId) continue;
-
-            const isoLang = fromProviderCode(ssLang, 'subsource') || fromProviderCode(sub.language, 'subsource');
-            if (!isoLang) continue;
-
-            const payload = Buffer.from(JSON.stringify({ subtitleId: String(sub.subtitleId) })).toString('base64url');
-
-            const rawRelease = sub.releaseInfo ?? sub.releaseName ?? '';
-            const releaseName = typeof rawRelease === 'string' ? rawRelease : (rawRelease != null ? String(rawRelease) : '');
-
-            results.push({
-              id: payload,
-              lang: isoLang,
-              provider: 'subsource',
-              releaseName,
-              downloads: sub.downloads || 0,
-            });
-          }
-
-          // Pagination
-          if (pagination && pagination.pages && page < pagination.pages) {
-            page++;
-          } else {
-            hasMore = false;
-          }
-        }
-      } catch (err) {
-        logger.warn('subsource', `Failed to fetch ${ssLang} subtitles: ${err.message}`);
-      }
+      results.push({
+        id: payload,
+        lang: isoLang,
+        provider: 'subsource',
+        releaseName: sub.releaseName,
+        downloads: sub.downloads || 0,
+      });
     }
 
     return results;
   } catch (error) {
-    logger.error('subsource', `API request failed: ${error.message}`, { imdbId: imdbIdFull });
+    logger.error('subsource', `API request failed: ${error.message}`, { title });
     return [];
   }
 };

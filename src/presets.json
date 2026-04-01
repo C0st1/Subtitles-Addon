@@ -2,9 +2,9 @@
   {
     "id": "default",
     "name": "Default",
-    "name_i18n": { "en": "Default", "ro": "Implicit", "fr": "Par défaut", "es": "Predeterminado", "de": "Standard", "it": "Predefinito", "pt": "Padrão", "ar": "افتراضي" },
+    "name_i18n": { "en": "Default", "ro": "Implicit", "fr": "Par défaut", "es": "Predeterminado", "de": "Standard", "ar": "افتراضي" },
     "desc": "All providers, English subtitles",
-    "desc_i18n": { "en": "All providers, English subtitles", "ro": "Toți furnizorii, subtitrări în engleză", "fr": "Tous les fournisseurs, sous-titres anglais", "es": "Todos los proveedores, subtítulos en inglés", "de": "Alle Anbieter, englische Untertitel", "it": "Tutti i provider, sottotitoli in inglese", "pt": "Todos os provedores, legendas em inglês", "ar": "جميع المصادر، ترجمة إنجليزية" },
+    "desc_i18n": { "en": "All providers, English subtitles", "ro": "Toți furnizorii, subtitrări în engleză", "fr": "Tous les fournisseurs, sous-titres anglais", "es": "Todos los proveedores, subtítulos en inglés", "de": "Alle Anbieter, englische Untertitel", "ar": "جميع المصادر، ترجمة إنجليزية" },
     "icon": "🌍",
     "config": {
       "languages": "eng",
@@ -14,9 +14,9 @@
   {
     "id": "european",
     "name": "European",
-    "name_i18n": { "en": "European", "ro": "European", "fr": "Européen", "es": "Europeo", "de": "Europäisch", "it": "Europeo", "pt": "Europeu", "ar": "أوروبي" },
+    "name_i18n": { "en": "European", "ro": "European", "fr": "Européen", "es": "Europeo", "de": "Europäisch", "ar": "أوروبي" },
     "desc": "European languages pack",
-    "desc_i18n": { "en": "European languages pack", "ro": "Pachet limbi europene", "fr": "Pack de langues européennes", "es": "Paquete de idiomas europeos", "de": "Europäisches Sprachpaket", "it": "Pacchetto lingue europee", "pt": "Pacote de idiomas europeus", "ar": "حزمة اللغات الأوروبية" },
+    "desc_i18n": { "en": "European languages pack", "ro": "Pachet limbi europene", "fr": "Pack de langues européennes", "es": "Paquete de idiomas europeos", "de": "Europäisches Sprachpaket", "ar": "حزمة اللغات الأوروبية" },
     "icon": "🇪🇺",
     "config": {
       "languages": "eng,fre,ger,spa,ita,por",
@@ -26,9 +26,9 @@
   {
     "id": "nordic",
     "name": "Nordic",
-    "name_i18n": { "en": "Nordic", "ro": "Nordic", "fr": "Nordique", "es": "Nórdico", "de": "Nordisch", "it": "Nordico", "pt": "Nórdico", "ar": "شمالي" },
+    "name_i18n": { "en": "Nordic", "ro": "Nordic", "fr": "Nordique", "es": "Nórdico", "de": "Nordisch", "ar": "شمالي" },
     "desc": "Scandinavian languages",
-    "desc_i18n": { "en": "Scandinavian languages", "ro": "Limbi scandinave", "fr": "Langues scandinaves", "es": "Idiomas escandinavos", "de": "Skandinavische Sprachen", "it": "Lingue scandinave", "pt": "Linguas escandinavas", "ar": "اللغات الاسكندنافية" },
+    "desc_i18n": { "en": "Scandinavian languages", "ro": "Limbi scandinave", "fr": "Langues scandinaves", "es": "Idiomas escandinavos", "de": "Skandinavische Sprachen", "ar": "اللغات الاسكندنافية" },
     "icon": "❄️",
     "config": {
       "languages": "swe,dan,nor,fin",
@@ -38,9 +38,9 @@
   {
     "id": "anime",
     "name": "Anime",
-    "name_i18n": { "en": "Anime", "ro": "Anime", "fr": "Anime", "es": "Anime", "de": "Anime", "it": "Anime", "pt": "Anime", "ar": "أنمي" },
+    "name_i18n": { "en": "Anime", "ro": "Anime", "fr": "Anime", "es": "Anime", "de": "Anime", "ar": "أنمي" },
     "desc": "Japanese + English",
-    "desc_i18n": { "en": "Japanese + English", "ro": "Japoneză + Engleză", "fr": "Japonais + Anglais", "es": "Japonés + Inglés", "de": "Japanisch + Englisch", "it": "Giapponese + Inglese", "pt": "Japonês + Inglês", "ar": "يابانية + إنجليزية" },
+    "desc_i18n": { "en": "Japanese + English", "ro": "Japoneză + Engleză", "fr": "Japonais + Anglais", "es": "Japonés + Inglés", "de": "Japanisch + Englisch", "ar": "يابانية + إنجليزية" },
     "icon": "🎌",
     "config": {
       "languages": "jpn,eng",
@@ -50,9 +50,9 @@
   {
     "id": "latin",
     "name": "Latin American",
-    "name_i18n": { "en": "Latin American", "ro": "America Latină", "fr": "Amérique latine", "es": "Latinoamericano", "de": "Lateinamerikanisch", "it": "America Latina", "pt": "Latino-americano", "ar": "أمريكا اللاتينية" },
+    "name_i18n": { "en": "Latin American", "ro": "America Latină", "fr": "Amérique latine", "es": "Latinoamericano", "de": "Lateinamerikanisch", "ar": "أمريكا اللاتينية" },
     "desc": "Spanish + Portuguese",
-    "desc_i18n": { "en": "Spanish + Portuguese", "ro": "Spaniolă + Portugheză", "fr": "Espagnol + Portugais", "es": "Español + Portugués", "de": "Spanisch + Portugiesisch", "it": "Spagnolo + Portoghese", "pt": "Espanhol + Português", "ar": "إسبانية + برتغالية" },
+    "desc_i18n": { "en": "Spanish + Portuguese", "ro": "Spaniolă + Portugheză", "fr": "Espagnol + Portugais", "es": "Español + Portugués", "de": "Spanisch + Portugiesisch", "ar": "إسبانية + برتغالية" },
     "icon": "🌎",
     "config": {
       "languages": "spa,por,eng",
@@ -62,9 +62,9 @@
   {
     "id": "balkan",
     "name": "Balkan",
-    "name_i18n": { "en": "Balkan", "ro": "Balcanic", "fr": "Balkanique", "es": "Balcánico", "de": "Balkan", "it": "Balcanico", "pt": "Balcânico", "ar": "بالكان" },
+    "name_i18n": { "en": "Balkan", "ro": "Balcanic", "fr": "Balkanique", "es": "Balcánico", "de": "Balkan", "ar": "بالكان" },
     "desc": "Romanian + neighbors",
-    "desc_i18n": { "en": "Romanian + neighbors", "ro": "Română + vecini", "fr": "Roumain + voisins", "es": "Rumano + vecinos", "de": "Rumänisch + Nachbarn", "it": "Rumeno + vicini", "pt": "Romeno + vizinhos", "ar": "رومانية + جيران" },
+    "desc_i18n": { "en": "Romanian + neighbors", "ro": "Română + vecini", "fr": "Roumain + voisins", "es": "Rumano + vecinos", "de": "Rumänisch + Nachbarn", "ar": "رومانية + جيران" },
     "icon": "🏔️",
     "config": {
       "languages": "ron,hun,hrv,srp,slv,bul",
@@ -74,9 +74,9 @@
   {
     "id": "asian",
     "name": "Asian",
-    "name_i18n": { "en": "Asian", "ro": "Asiatic", "fr": "Asiatique", "es": "Asiático", "de": "Asiatisch", "it": "Asiatico", "pt": "Asiático", "ar": "آسيوي" },
+    "name_i18n": { "en": "Asian", "ro": "Asiatic", "fr": "Asiatique", "es": "Asiático", "de": "Asiatisch", "ar": "آسيوي" },
     "desc": "CJK + Southeast Asian languages",
-    "desc_i18n": { "en": "CJK + Southeast Asian languages", "ro": "CJK + limbi asiatice de SE", "fr": "CJK + langues d'Asie du Sud-Est", "es": "CJK + idiomas del sudeste asiático", "de": "CJK + Südostasiatische Sprachen", "it": "CJK + lingue del sud-est asiatico", "pt": "CJK + idiomas do sudeste asiático", "ar": "لغات شرق آسيا وجنوب شرق آسيا" },
+    "desc_i18n": { "en": "CJK + Southeast Asian languages", "ro": "CJK + limbi asiatice de SE", "fr": "CJK + langues d'Asie du Sud-Est", "es": "CJK + idiomas del sudeste asiático", "de": "CJK + Südostasiatische Sprachen", "ar": "لغات شرق آسيا وجنوب شرق آسيا" },
     "icon": "🌏",
     "config": {
       "languages": "jpn,kor,chi,tha,vie,ind",
@@ -86,9 +86,9 @@
   {
     "id": "max_coverage",
     "name": "Max Coverage",
-    "name_i18n": { "en": "Max Coverage", "ro": "Acoprire Maximă", "fr": "Couverture maximale", "es": "Cobertura máxima", "de": "Maximale Abdeckung", "it": "Copertura massima", "pt": "Cobertura máxima", "ar": "تغطية قصوى" },
+    "name_i18n": { "en": "Max Coverage", "ro": "Acoprire Maximă", "fr": "Couverture maximale", "es": "Cobertura máxima", "de": "Maximale Abdeckung", "ar": "تغطية قصوى" },
     "desc": "All languages, all providers",
-    "desc_i18n": { "en": "All languages, all providers", "ro": "Toate limbile, toți furnizorii", "fr": "Toutes les langues, tous les fournisseurs", "es": "Todos los idiomas, todos los proveedores", "de": "Alle Sprachen, alle Anbieter", "it": "Tutte le lingue, tutti i provider", "pt": "Todos os idiomas, todos os provedores", "ar": "جميع اللغات، جميع المصادر" },
+    "desc_i18n": { "en": "All languages, all providers", "ro": "Toate limbile, toți furnizorii", "fr": "Toutes les langues, tous les fournisseurs", "es": "Todos los idiomas, todos los proveedores", "de": "Alle Sprachen, alle Anbieter", "ar": "جميع اللغات، جميع المصادر" },
     "icon": "🎯",
     "config": {
       "languages": "eng,ron,fre,spa,ger,ita,por,gre,hun,ara,jpn,kor,chi,tur,dut,swe",

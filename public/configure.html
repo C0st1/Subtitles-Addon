@@ -286,14 +286,8 @@
       font-weight: 600;
       white-space: nowrap;
     }
-    .lang-select-wrapper {
-      position: relative;
+    .lang-select-row select {
       flex: 1;
-    }
-    .lang-select-trigger {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       padding: 8px 12px;
       border-radius: 8px;
       border: 1px solid var(--border);
@@ -302,69 +296,13 @@
       font-size: 13px;
       font-family: inherit;
       cursor: pointer;
-      transition: border-color 0.2s;
-      user-select: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 30px;
     }
-    .lang-select-trigger:hover { border-color: rgba(255,255,255,0.2); }
-    .lang-select-trigger.open { border-color: var(--primary); }
-    .lang-select-trigger .lang-flag {
-      margin-right: 8px;
-      font-size: 16px;
-    }
-    .lang-select-trigger .lang-chevron {
-      width: 12px;
-      height: 12px;
-      color: var(--text-muted);
-      transition: transform 0.2s;
-      flex-shrink: 0;
-    }
-    .lang-select-trigger.open .lang-chevron { transform: rotate(180deg); }
-    [dir="rtl"] .lang-select-trigger .lang-flag { margin-right: 0; margin-left: 8px; }
-    .lang-select-dropdown {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
-      right: 0;
-      background: #1e293b;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-      z-index: 50;
-      overflow: hidden;
-      display: none;
-      max-height: 260px;
-      overflow-y: auto;
-    }
-    .lang-select-dropdown.open { display: block; }
-    .lang-select-dropdown .lang-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 12px;
-      font-size: 13px;
-      font-family: inherit;
-      color: var(--text-main);
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    .lang-select-dropdown .lang-option:hover {
-      background: var(--primary-light);
-    }
-    .lang-select-dropdown .lang-option.active {
-      background: rgba(139, 92, 246, 0.2);
-      color: #c4b5fd;
-      font-weight: 600;
-    }
-    .lang-select-dropdown .lang-option .opt-flag { font-size: 16px; }
-    .lang-select-dropdown::-webkit-scrollbar { width: 6px; }
-    .lang-select-dropdown::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 3px;
-    }
-    .lang-select-dropdown::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 3px;
-    }
+    .lang-select-row select:focus { outline: none; border-color: var(--primary); }
 
     /* ========== PRESETS GRID ========== */
     .presets-grid {
@@ -451,20 +389,10 @@
       left: 50%;
       transform: translateX(-50%);
       opacity: 0;
-      transition: opacity 0.25s ease;
+      transition: opacity 0.3s;
       font-weight: 500;
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-      pointer-events: none;
-    }
-    .tooltip .tooltiptext::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border-width: 6px;
-      border-style: solid;
-      border-color: #0f172a transparent transparent transparent;
+      pointer-events: auto;
     }
     .tooltiptext a {
       color: var(--primary);
@@ -473,12 +401,7 @@
       margin-top: 6px;
       font-size: 11px;
     }
-    .tooltip:hover .tooltiptext,
-    .tooltip .tooltiptext:hover {
-      visibility: visible;
-      opacity: 1;
-      pointer-events: auto;
-    }
+    .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
 
     /* Provider credential inputs */
     .provider-inputs { margin-top: 8px; }
@@ -954,17 +877,17 @@
 
         <span class="section-label" data-i18n="select_language">Page Language</span>
         <div class="lang-select-row">
-          <label>&#127760;</label>
-          <div class="lang-select-wrapper" id="langSelectWrapper">
-            <div class="lang-select-trigger" id="langSelectTrigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
-              <span class="lang-flag" id="langTriggerFlag"></span>
-              <span id="langTriggerText">English</span>
-              <svg class="lang-chevron" fill="none" stroke="currentColor" viewBox="0 0 16 16"><path d="M8 11L3 6h10z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div class="lang-select-dropdown" id="langSelectDropdown" role="listbox">
-              <!-- Populated dynamically -->
-            </div>
-          </div>
+          <label for="pageLangSelect">&#127760;</label>
+          <select id="pageLangSelect">
+            <option value="en">English</option>
+            <option value="ro">Romana</option>
+            <option value="fr">Fran&ccedil;ais</option>
+            <option value="es">Espa&ntilde;ol</option>
+            <option value="de">Deutsch</option>
+            <option value="it">Italiano</option>
+            <option value="pt">Portugu&ecirc;s</option>
+            <option value="ar">&#1593;&#1585;&#1576;&#1610;</option>
+          </select>
         </div>
 
         <div class="divider"></div>
@@ -1561,8 +1484,6 @@
       function setLanguage(lang) {
         currentLang = lang;
         applyTranslations();
-        if (loadedPresets && loadedPresets.length > 0) renderPresets();
-        updateLangTrigger();
         try { localStorage.setItem('subtitleHub_lang', lang); } catch(e) {}
       }
 
@@ -1570,14 +1491,14 @@
       // BUILT-IN PRESETS
       // ===========================
       var BUILTIN_PRESETS = [
-        { id: "default", name: "Default", name_i18n: {"en":"Default","ro":"Implicit","fr":"Par défaut","es":"Predeterminado","de":"Standard","it":"Predefinito","pt":"Padrão","ar":"افتراضي"}, desc: "All providers, English", desc_i18n: {"en":"All providers, English subtitles","ro":"Toți furnizorii, subtitrări în engleză","fr":"Tous les fournisseurs, sous-titres anglais","es":"Todos los proveedores, subtítulos en inglés","de":"Alle Anbieter, englische Untertitel","it":"Tutti i provider, sottotitoli in inglese","pt":"Todos os provedores, legendas em inglês","ar":"جميع المصادر، ترجمة إنجليزية"}, icon: "🌍", config: { languages: "eng", enabled_sources: "opensubtitles,subdl,subsource" } },
-        { id: "european", name: "European", name_i18n: {"en":"European","ro":"European","fr":"Européen","es":"Europeo","de":"Europäisch","it":"Europeo","pt":"Europeu","ar":"أوروبي"}, desc: "European languages pack", desc_i18n: {"en":"European languages pack","ro":"Pachet limbi europene","fr":"Pack de langues européennes","es":"Paquete de idiomas europeos","de":"Europäisches Sprachpaket","it":"Pacchetto lingue europee","pt":"Pacote de idiomas europeus","ar":"حزمة اللغات الأوروبية"}, icon: "🇪🇺", config: { languages: "eng,fre,ger,spa,ita,por", enabled_sources: "opensubtitles,subdl,subsource" } },
-        { id: "nordic", name: "Nordic", name_i18n: {"en":"Nordic","ro":"Nordic","fr":"Nordique","es":"Nórdico","de":"Nordisch","it":"Nordico","pt":"Nórdico","ar":"شمالي"}, desc: "Scandinavian languages", desc_i18n: {"en":"Scandinavian languages","ro":"Limbi scandinave","fr":"Langues scandinaves","es":"Idiomas escandinavos","de":"Skandinavische Sprachen","it":"Lingue scandinave","pt":"Linguas escandinavas","ar":"اللغات الاسكندنافية"}, icon: "❄️", config: { languages: "swe,dan,nor,fin", enabled_sources: "opensubtitles,subdl" } },
-        { id: "anime", name: "Anime", name_i18n: {"en":"Anime","ro":"Anime","fr":"Anime","es":"Anime","de":"Anime","it":"Anime","pt":"Anime","ar":"أنمي"}, desc: "Japanese + English", desc_i18n: {"en":"Japanese + English","ro":"Japoneză + Engleză","fr":"Japonais + Anglais","es":"Japonés + Inglés","de":"Japanisch + Englisch","it":"Giapponese + Inglese","pt":"Japonês + Inglês","ar":"يابانية + إنجليزية"}, icon: "🎌", config: { languages: "jpn,eng", enabled_sources: "opensubtitles,subdl" } },
-        { id: "latin", name: "Latin American", name_i18n: {"en":"Latin American","ro":"America Latină","fr":"Amérique latine","es":"Latinoamericano","de":"Lateinamerikanisch","it":"America Latina","pt":"Latino-americano","ar":"أمريكا اللاتينية"}, desc: "Spanish + Portuguese", desc_i18n: {"en":"Spanish + Portuguese","ro":"Spaniolă + Portugheză","fr":"Espagnol + Portugais","es":"Español + Portugués","de":"Spanisch + Portugiesisch","it":"Spagnolo + Portoghese","pt":"Espanhol + Português","ar":"إسبانية + برتغالية"}, icon: "🌎", config: { languages: "spa,por,eng", enabled_sources: "opensubtitles,subdl,subsource" } },
-        { id: "balkan", name: "Balkan", name_i18n: {"en":"Balkan","ro":"Balcanic","fr":"Balkanique","es":"Balcánico","de":"Balkan","it":"Balcanico","pt":"Balcânico","ar":"بالكان"}, desc: "Romanian + neighbors", desc_i18n: {"en":"Romanian + neighbors","ro":"Română + vecini","fr":"Roumain + voisins","es":"Rumano + vecinos","de":"Rumänisch + Nachbarn","it":"Rumeno + vicini","pt":"Romeno + vizinhos","ar":"رومانية + جيران"}, icon: "🏔️", config: { languages: "ron,hun,hrv,srp,slv,bul", enabled_sources: "subsource,opensubtitles" } },
-        { id: "asian", name: "Asian", name_i18n: {"en":"Asian","ro":"Asiatic","fr":"Asiatique","es":"Asiático","de":"Asiatisch","it":"Asiatico","pt":"Asiático","ar":"آسيوي"}, desc: "CJK + Southeast Asian", desc_i18n: {"en":"CJK + Southeast Asian languages","ro":"CJK + limbi asiatice de SE","fr":"CJK + langues d'Asie du Sud-Est","es":"CJK + idiomas del sudeste asiático","de":"CJK + Südostasiatische Sprachen","it":"CJK + lingue del sud-est asiatico","pt":"CJK + idiomas do sudeste asiático","ar":"لغات شرق آسيا وجنوب شرق آسيا"}, icon: "🌏", config: { languages: "jpn,kor,chi,tha,vie,ind", enabled_sources: "opensubtitles,subdl" } },
-        { id: "max_coverage", name: "Max Coverage", name_i18n: {"en":"Max Coverage","ro":"Acoperire Maximă","fr":"Couverture maximale","es":"Cobertura máxima","de":"Maximale Abdeckung","it":"Copertura massima","pt":"Cobertura máxima","ar":"تغطية قصوى"}, desc: "All languages, all providers", desc_i18n: {"en":"All languages, all providers","ro":"Toate limbile, toți furnizorii","fr":"Toutes les langues, tous les fournisseurs","es":"Todos los idiomas, todos los proveedores","de":"Alle Sprachen, alle Anbieter","it":"Tutte le lingue, tutti i provider","pt":"Todos os idiomas, todos os provedores","ar":"جميع اللغات، جميع المصادر"}, icon: "🎯", config: { languages: "eng,ron,fre,spa,ger,ita,por,gre,hun,ara,jpn,kor,chi,tur,dut,swe", enabled_sources: "opensubtitles,subdl,subsource" } }
+        { id: "default", name: "Default", desc: "All providers, English", icon: "\uD83C\uDF0D", config: { languages: "eng", enabled_sources: "opensubtitles,subdl,subsource" } },
+        { id: "european", name: "European", desc: "European languages pack", icon: "\uD83C\uDDEA\uD83C\uDDFA", config: { languages: "eng,fre,ger,spa,ita,por", enabled_sources: "opensubtitles,subdl,subsource" } },
+        { id: "nordic", name: "Nordic", desc: "Scandinavian languages", icon: "\u2744\uFE0F", config: { languages: "swe,dan,nor,fin", enabled_sources: "opensubtitles,subdl" } },
+        { id: "anime", name: "Anime", desc: "Japanese + English", icon: "\uD83C\uDFEF", config: { languages: "jpn,eng", enabled_sources: "opensubtitles,subdl" } },
+        { id: "latin", name: "Latin American", desc: "Spanish + Portuguese", icon: "\uD83C\uDF0E", config: { languages: "spa,por,eng", enabled_sources: "opensubtitles,subdl,subsource" } },
+        { id: "balkan", name: "Balkan", desc: "Romanian + neighbors", icon: "\uD83C\uDFD4\uFE0F", config: { languages: "ron,hun,hrv,srp,slv,bul", enabled_sources: "subsource,opensubtitles" } },
+        { id: "asian", name: "Asian", desc: "CJK + SEA languages", icon: "\uD83C\uDF0F", config: { languages: "jpn,kor,chi,tha,vie,ind", enabled_sources: "opensubtitles,subdl" } },
+        { id: "max_coverage", name: "Max Coverage", desc: "All languages, all providers", icon: "\uD83C\uDFAF", config: { languages: "eng,ron,fre,spa,ger,ita,por,gre,hun,ara,jpn,kor,chi,tur,dut,swe", enabled_sources: "opensubtitles,subdl,subsource" } }
       ];
 
       var loadedPresets = BUILTIN_PRESETS.slice();
@@ -1605,11 +1526,9 @@
           card.className = 'preset-card';
           card.setAttribute('tabindex', '0');
           card.setAttribute('role', 'button');
-          var pName = (preset.name_i18n && preset.name_i18n[currentLang]) || preset.name;
-          var pDesc = (preset.desc_i18n && preset.desc_i18n[currentLang]) || preset.desc;
           card.innerHTML = '<span class="preset-icon">' + escapeHtml(preset.icon) + '</span>' +
-            '<div class="preset-name">' + escapeHtml(pName) + '</div>' +
-            '<div class="preset-desc">' + escapeHtml(pDesc) + '</div>';
+            '<div class="preset-name">' + escapeHtml(preset.name) + '</div>' +
+            '<div class="preset-desc">' + escapeHtml(preset.desc) + '</div>';
           card.addEventListener('click', function() { applyPreset(preset); });
           card.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); applyPreset(preset); }
@@ -1675,11 +1594,6 @@
 
       function goToStep(newStep) {
         if (newStep < 0 || newStep >= totalSteps) return;
-
-        // Hide result panel and restore wizard navigation (fixes result sticking around when clicking step buttons)
-        document.getElementById('resultWrapper').style.display = 'none';
-        document.getElementById('result').style.display = 'none';
-        document.querySelector('.wizard-footer').style.display = 'flex';
 
         var oldPanel = document.getElementById('stepPanel' + currentStep);
         var newPanel = document.getElementById('stepPanel' + newStep);
@@ -2325,85 +2239,6 @@
       }
 
       // ===========================
-      // CUSTOM LANGUAGE DROPDOWN
-      // ===========================
-      var LANG_OPTIONS = [
-        { code: 'en', label: 'English', flag: '🇬🇧' },
-        { code: 'ro', label: 'Română', flag: '🇷🇴' },
-        { code: 'fr', label: 'Français', flag: '🇫🇷' },
-        { code: 'es', label: 'Español', flag: '🇪🇸' },
-        { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-        { code: 'it', label: 'Italiano', flag: '🇮🇹' },
-        { code: 'pt', label: 'Português', flag: '🇵🇹' },
-        { code: 'ar', label: 'عربي', flag: '🇸🇦' }
-      ];
-
-      function initLangDropdown() {
-        var dropdown = document.getElementById('langSelectDropdown');
-        dropdown.innerHTML = '';
-        LANG_OPTIONS.forEach(function(opt) {
-          var div = document.createElement('div');
-          div.className = 'lang-option' + (opt.code === currentLang ? ' active' : '');
-          div.setAttribute('role', 'option');
-          div.setAttribute('data-code', opt.code);
-          div.innerHTML = '<span class="opt-flag">' + opt.flag + '</span><span>' + escapeHtml(opt.label) + '</span>';
-          div.addEventListener('click', function(e) {
-            e.stopPropagation();
-            closeLangDropdown();
-            setLanguage(opt.code);
-            renderPriorityList();
-            renderProfiles();
-          });
-          dropdown.appendChild(div);
-        });
-        updateLangTrigger();
-      }
-
-      function updateLangTrigger() {
-        var opt = LANG_OPTIONS.find(function(o) { return o.code === currentLang; }) || LANG_OPTIONS[0];
-        document.getElementById('langTriggerFlag').textContent = opt.flag;
-        document.getElementById('langTriggerText').textContent = opt.label;
-        // Update active state in dropdown
-        var items = document.querySelectorAll('#langSelectDropdown .lang-option');
-        items.forEach(function(el) {
-          el.classList.toggle('active', el.getAttribute('data-code') === currentLang);
-        });
-      }
-
-      function openLangDropdown() {
-        document.getElementById('langSelectDropdown').classList.add('open');
-        document.getElementById('langSelectTrigger').classList.add('open');
-        document.getElementById('langSelectTrigger').setAttribute('aria-expanded', 'true');
-      }
-
-      function closeLangDropdown() {
-        document.getElementById('langSelectDropdown').classList.remove('open');
-        document.getElementById('langSelectTrigger').classList.remove('open');
-        document.getElementById('langSelectTrigger').setAttribute('aria-expanded', 'false');
-      }
-
-      function toggleLangDropdown() {
-        var isOpen = document.getElementById('langSelectDropdown').classList.contains('open');
-        if (isOpen) closeLangDropdown(); else openLangDropdown();
-      }
-
-      // Wire up trigger clicks + keyboard
-      document.getElementById('langSelectTrigger').addEventListener('click', function(e) {
-        e.stopPropagation();
-        toggleLangDropdown();
-      });
-      document.getElementById('langSelectTrigger').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleLangDropdown(); }
-        if (e.key === 'Escape') closeLangDropdown();
-      });
-      // Close on outside click
-      document.addEventListener('click', function(e) {
-        if (!document.getElementById('langSelectWrapper').contains(e.target)) {
-          closeLangDropdown();
-        }
-      });
-
-      // ===========================
       // UTILITY FUNCTIONS
       // ===========================
       function escapeHtml(str) {
@@ -2428,7 +2263,14 @@
         }
 
         // Set language dropdown
-        initLangDropdown();
+        document.getElementById('pageLangSelect').value = currentLang;
+
+        // Language dropdown listener
+        document.getElementById('pageLangSelect').addEventListener('change', function() {
+          setLanguage(this.value);
+          renderPriorityList();
+          renderProfiles();
+        });
 
         // Load presets
         loadPresets();
