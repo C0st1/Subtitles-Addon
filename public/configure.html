@@ -1595,6 +1595,11 @@
       function goToStep(newStep) {
         if (newStep < 0 || newStep >= totalSteps) return;
 
+        // Hide result panel and restore wizard navigation (fixes result sticking around when clicking step buttons)
+        document.getElementById('resultWrapper').style.display = 'none';
+        document.getElementById('result').style.display = 'none';
+        document.querySelector('.wizard-footer').style.display = 'flex';
+
         var oldPanel = document.getElementById('stepPanel' + currentStep);
         var newPanel = document.getElementById('stepPanel' + newStep);
 
