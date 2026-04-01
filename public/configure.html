@@ -15,6 +15,9 @@
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --input-bg: rgba(0, 0, 0, 0.3);
+      --warning-bg: rgba(245, 158, 11, 0.1);
+      --warning-border: rgba(245, 158, 11, 0.3);
+      --warning-text: #fbbf24;
     }
 
     * { box-sizing: border-box; }
@@ -23,7 +26,7 @@
       margin: 0;
       min-height: 100vh;
       background-color: var(--bg-dark);
-      background-image: 
+      background-image:
         radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.15), transparent 35%),
         radial-gradient(circle at 100% 100%, rgba(124, 58, 237, 0.1), transparent 35%);
       color: var(--text-main);
@@ -75,6 +78,23 @@
       display: block;
     }
 
+    /* Security Warning Banner */
+    .security-warning {
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--warning-text);
+    }
+    .security-warning strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
     .provider-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -99,9 +119,9 @@
       margin-bottom: 12px;
     }
 
-    .provider-name { 
-      font-size: 14px; 
-      font-weight: 600; 
+    .provider-name {
+      font-size: 14px;
+      font-weight: 600;
       display: flex;
       align-items: center;
     }
@@ -125,7 +145,7 @@
 
     .tooltip .tooltiptext {
       visibility: hidden;
-      width: 200px;
+      width: 220px;
       background-color: #0f172a;
       color: #f8fafc;
       text-align: center;
@@ -134,7 +154,7 @@
       padding: 12px;
       position: absolute;
       z-index: 10;
-      bottom: 125%; 
+      bottom: 125%;
       left: 50%;
       transform: translateX(-50%);
       opacity: 0;
@@ -173,6 +193,9 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 4px;
     }
 
     .lang-chip {
@@ -183,7 +206,12 @@
       font-size: 13px;
       cursor: pointer;
       transition: all 0.2s;
+      user-select: none;
+      outline: none;
     }
+
+    .lang-chip:hover { border-color: var(--primary); }
+    .lang-chip:focus-visible { box-shadow: 0 0 0 2px var(--primary); }
 
     .lang-chip.active {
       background: var(--primary);
@@ -199,6 +227,12 @@
       padding: 10px 12px;
       border-radius: 8px;
       font-size: 13px;
+      max-width: 100%;
+    }
+
+    input[type="password"]:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
     }
 
     .switch {
@@ -248,7 +282,11 @@
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
+      transition: background 0.2s;
     }
+
+    button:hover { background: var(--primary-hover); }
+    button:focus-visible { outline: 2px solid white; outline-offset: 2px; }
 
     .result-panel {
       display: none;
@@ -269,7 +307,10 @@
       text-decoration: none;
       font-weight: 700;
       margin-bottom: 12px;
+      transition: opacity 0.2s;
     }
+
+    .install-btn:hover { opacity: 0.9; }
 
     .code-block {
       font-family: monospace;
@@ -280,14 +321,33 @@
       word-break: break-all;
       color: #a78bfa;
     }
+
+    /* Scrollbar styling for language picker */
+    .lang-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .lang-container::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+    .lang-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    @media (max-width: 500px) {
+      .provider-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <div class="dashboard">
+  <div class="dashboard" role="main">
     <div class="header">
-      <div class="header-icon">
-        <svg style="width:28px;height:28px;color:white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="header-icon" aria-hidden="true">
+        <svg style="width:28px;height:28px;color:white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Subtitle Hub icon">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
         </svg>
       </div>
@@ -296,92 +356,141 @@
     </div>
 
     <div class="content">
-      <span class="section-label">Providers & API Keys</span>
-      <div class="provider-grid">
+      <!-- Security Warning -->
+      <div class="security-warning" role="alert">
+        <strong>Security Notice</strong>
+        API keys entered below will be encoded in the addon URL. For maximum security,
+        configure API keys as server environment variables instead. The subtitle proxy
+        will automatically use environment variables as fallback.
+      </div>
+
+      <span class="section-label" id="providers-label">Providers & API Keys</span>
+      <div class="provider-grid" role="group" aria-labelledby="providers-label">
         <div class="provider-card">
           <div class="provider-header">
             <span class="provider-name">OpenSubtitles
-              <span class="tooltip">?
+              <span class="tooltip" role="tooltip" aria-label="OpenSubtitles API key info">
+                ?
                 <div class="tooltiptext">
                   Register for a free account to get your API key.
-                  <a href="https://www.opensubtitles.com/en/consumers" target="_blank">Get API Key →</a>
+                  <a href="https://www.opensubtitles.com/en/consumers" target="_blank" rel="noopener noreferrer">Get API Key</a>
                 </div>
               </span>
             </span>
-            <label class="switch">
+            <label class="switch" aria-label="Enable OpenSubtitles">
               <input type="checkbox" id="check_opensubtitles" checked>
               <span class="slider"></span>
             </label>
           </div>
-          <input type="password" id="key_opensubtitles" placeholder="API Key (Optional)">
+          <input type="password" id="key_opensubtitles" placeholder="API Key (Optional)" maxlength="256" aria-label="OpenSubtitles API Key">
         </div>
 
         <div class="provider-card">
           <div class="provider-header">
             <span class="provider-name">SubDL
-              <span class="tooltip">?
+              <span class="tooltip" role="tooltip" aria-label="SubDL API key info">
+                ?
                 <div class="tooltiptext">
                   Create an account and find your key on the API page.
-                  <a href="https://subdl.com/" target="_blank">Get API Key →</a>
+                  <a href="https://subdl.com/" target="_blank" rel="noopener noreferrer">Get API Key</a>
                 </div>
               </span>
             </span>
-            <label class="switch">
+            <label class="switch" aria-label="Enable SubDL">
               <input type="checkbox" id="check_subdl" checked>
               <span class="slider"></span>
             </label>
           </div>
-          <input type="password" id="key_subdl" placeholder="API Key">
+          <input type="password" id="key_subdl" placeholder="API Key" maxlength="256" aria-label="SubDL API Key">
         </div>
 
         <div class="provider-card">
           <div class="provider-header">
             <span class="provider-name">SubSource
-              <span class="tooltip">?
+              <span class="tooltip" role="tooltip" aria-label="SubSource API key info">
+                ?
                 <div class="tooltiptext">
                   Register to get access to the SubSource API.
-                  <a href="https://subsource.net/" target="_blank">Get API Key →</a>
+                  <a href="https://subsource.net/" target="_blank" rel="noopener noreferrer">Get API Key</a>
                 </div>
               </span>
             </span>
-            <label class="switch">
+            <label class="switch" aria-label="Enable SubSource">
               <input type="checkbox" id="check_subsource" checked>
               <span class="slider"></span>
             </label>
           </div>
-          <input type="password" id="key_subsource" placeholder="API Key">
+          <input type="password" id="key_subsource" placeholder="API Key" maxlength="256" aria-label="SubSource API Key">
         </div>
       </div>
 
-      <span class="section-label">Preferred Languages</span>
-      <div class="lang-container" id="langPicker">
-        <div class="lang-chip" data-code="eng">English</div>
-        <div class="lang-chip" data-code="ron">Romanian</div>
-        <div class="lang-chip" data-code="fre">French</div>
-        <div class="lang-chip" data-code="spa">Spanish</div>
-        <div class="lang-chip" data-code="ger">German</div>
-        <div class="lang-chip" data-code="ita">Italian</div>
-        <div class="lang-chip" data-code="hun">Hungarian</div>
-        <div class="lang-chip" data-code="por">Portuguese</div>
-        <div class="lang-chip" data-code="gre">Greek</div>
+      <span class="section-label" id="languages-label">Preferred Languages</span>
+      <div class="lang-container" id="langPicker" role="group" aria-labelledby="languages-label">
+        <div class="lang-chip active" data-code="eng" role="checkbox" aria-checked="true" tabindex="0">English</div>
+        <div class="lang-chip" data-code="ron" role="checkbox" aria-checked="false" tabindex="0">Romanian</div>
+        <div class="lang-chip" data-code="fre" role="checkbox" aria-checked="false" tabindex="0">French</div>
+        <div class="lang-chip" data-code="spa" role="checkbox" aria-checked="false" tabindex="0">Spanish</div>
+        <div class="lang-chip" data-code="ger" role="checkbox" aria-checked="false" tabindex="0">German</div>
+        <div class="lang-chip" data-code="ita" role="checkbox" aria-checked="false" tabindex="0">Italian</div>
+        <div class="lang-chip" data-code="por" role="checkbox" aria-checked="false" tabindex="0">Portuguese</div>
+        <div class="lang-chip" data-code="gre" role="checkbox" aria-checked="false" tabindex="0">Greek</div>
+        <div class="lang-chip" data-code="hun" role="checkbox" aria-checked="false" tabindex="0">Hungarian</div>
+        <div class="lang-chip" data-code="ara" role="checkbox" aria-checked="false" tabindex="0">Arabic</div>
+        <div class="lang-chip" data-code="jpn" role="checkbox" aria-checked="false" tabindex="0">Japanese</div>
+        <div class="lang-chip" data-code="kor" role="checkbox" aria-checked="false" tabindex="0">Korean</div>
+        <div class="lang-chip" data-code="chi" role="checkbox" aria-checked="false" tabindex="0">Chinese</div>
+        <div class="lang-chip" data-code="tur" role="checkbox" aria-checked="false" tabindex="0">Turkish</div>
+        <div class="lang-chip" data-code="dut" role="checkbox" aria-checked="false" tabindex="0">Dutch</div>
+        <div class="lang-chip" data-code="swe" role="checkbox" aria-checked="false" tabindex="0">Swedish</div>
+        <div class="lang-chip" data-code="hin" role="checkbox" aria-checked="false" tabindex="0">Hindi</div>
+        <div class="lang-chip" data-code="tha" role="checkbox" aria-checked="false" tabindex="0">Thai</div>
+        <div class="lang-chip" data-code="cze" role="checkbox" aria-checked="false" tabindex="0">Czech</div>
+        <div class="lang-chip" data-code="pol" role="checkbox" aria-checked="false" tabindex="0">Polish</div>
+        <div class="lang-chip" data-code="hrv" role="checkbox" aria-checked="false" tabindex="0">Croatian</div>
+        <div class="lang-chip" data-code="rus" role="checkbox" aria-checked="false" tabindex="0">Russian</div>
+        <div class="lang-chip" data-code="ukr" role="checkbox" aria-checked="false" tabindex="0">Ukrainian</div>
+        <div class="lang-chip" data-code="bul" role="checkbox" aria-checked="false" tabindex="0">Bulgarian</div>
+        <div class="lang-chip" data-code="fin" role="checkbox" aria-checked="false" tabindex="0">Finnish</div>
+        <div class="lang-chip" data-code="dan" role="checkbox" aria-checked="false" tabindex="0">Danish</div>
+        <div class="lang-chip" data-code="nor" role="checkbox" aria-checked="false" tabindex="0">Norwegian</div>
+        <div class="lang-chip" data-code="heb" role="checkbox" aria-checked="false" tabindex="0">Hebrew</div>
+        <div class="lang-chip" data-code="ind" role="checkbox" aria-checked="false" tabindex="0">Indonesian</div>
+        <div class="lang-chip" data-code="vie" role="checkbox" aria-checked="false" tabindex="0">Vietnamese</div>
+        <div class="lang-chip" data-code="srp" role="checkbox" aria-checked="false" tabindex="0">Serbian</div>
+        <div class="lang-chip" data-code="slv" role="checkbox" aria-checked="false" tabindex="0">Slovenian</div>
       </div>
     </div>
 
     <div class="footer">
-      <button onclick="generate()">Generate Link</button>
+      <button id="generateBtn" type="button">Generate Link</button>
 
-      <div class="result-panel" id="result">
-        <a id="stremioLink" href="#" class="install-btn">Install in Stremio</a>
+      <div class="result-panel" id="result" role="region" aria-live="polite">
+        <a id="stremioLink" href="#" class="install-btn" role="button">Install in Stremio</a>
         <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px">Or copy URL:</div>
-        <div id="manualUrl" class="code-block"></div>
+        <div id="manualUrl" class="code-block" role="textbox" aria-readonly="true"></div>
       </div>
     </div>
   </div>
 
   <script>
+    // Language chip interaction with keyboard and click support
     document.querySelectorAll('.lang-chip').forEach(chip => {
-      chip.onclick = () => chip.classList.toggle('active');
+      chip.addEventListener('click', () => toggleChip(chip));
+      chip.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleChip(chip);
+        }
+      });
     });
+
+    function toggleChip(chip) {
+      const isActive = chip.classList.toggle('active');
+      chip.setAttribute('aria-checked', isActive ? 'true' : 'false');
+    }
+
+    // Generate button
+    document.getElementById('generateBtn').addEventListener('click', generate);
 
     function generate() {
       const providers = ['opensubtitles', 'subdl', 'subsource'];
@@ -393,6 +502,11 @@
         return;
       }
 
+      if (enabledSources.length === 0) {
+        alert("Please enable at least one subtitle provider!");
+        return;
+      }
+
       const config = {
         opensubtitles_api_key: document.getElementById('key_opensubtitles').value.trim(),
         subdl_api_key: document.getElementById('key_subdl').value.trim(),
@@ -401,19 +515,20 @@
         enabled_sources: enabledSources.join(',')
       };
 
+      // Remove empty values
       Object.keys(config).forEach(k => !config[k] && delete config[k]);
 
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');
-      
+
       const host = window.location.host;
       const protocol = window.location.protocol;
-      
+
       const manifestUrl = `${protocol}//${host}/${encoded}/manifest.json`;
       const installUrl = `stremio://${host}/${encoded}/manifest.json`;
-      
+
       document.getElementById('stremioLink').href = installUrl;
       document.getElementById('manualUrl').innerText = manifestUrl;
       document.getElementById('result').style.display = 'block';
