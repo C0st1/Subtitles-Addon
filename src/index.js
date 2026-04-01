@@ -11,9 +11,7 @@ const logger = require('./utils/logger');
 
 const app = express();
 
-// Required for Vercel and any reverse proxy — enables correct IP identification
-// for rate limiting and security headers (X-Forwarded-For, X-Forwarded-Proto)
-app.set('trust proxy', true);
+app.set('trust proxy', 1); // Trust 1 proxy layer (Vercel edge) — satisfies express-rate-limit
 app.use(cors());
 
 // Add request ID for log correlation in serverless environments
