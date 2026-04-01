@@ -10,6 +10,10 @@ const proxyRoute = require('./routes/subtitle-proxy');
 const logger = require('./utils/logger');
 
 const app = express();
+
+// Required for Vercel and any reverse proxy — enables correct IP identification
+// for rate limiting and security headers (X-Forwarded-For, X-Forwarded-Proto)
+app.set('trust proxy', true);
 app.use(cors());
 
 // Add request ID for log correlation in serverless environments
