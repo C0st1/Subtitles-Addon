@@ -680,7 +680,10 @@ app.get('/subtitle/translate/:payload.:ext', proxyLimiter, async (req, res) => {
       return res.status(400).send('Incomplete payload.');
     }
 
-    const cacheKey = `translate:${ext}:${payload}`;
+    // Cache version — bump this to invalidate old cached translations
+    // (e.g., after fixing translation logic bugs)
+    const MT_CACHE_VERSION = 'v2';
+    const cacheKey = `translate:${MT_CACHE_VERSION}:${ext}:${payload}`;
     const cached = await cacheGet(cacheKey);
     if (cached) {
       res.setHeader('Content-Type', isSrt ? 'text/plain; charset=utf-8' : 'text/vtt; charset=utf-8');

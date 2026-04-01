@@ -213,10 +213,12 @@ module.exports = async (args) => {
     if (enableMT && subtitles.length === 0) {
       logger.info('system', 'MT fallback: no subtitles found, attempting translation');
       const mtParams = { ...fetchParams, languages: ['eng'] };
-      const mtPromises = enabledSources
-        .filter(source => PROVIDERS[source] && isProviderHealthy(source))
-        .map(source => withTimeout(signal => PROVIDERS[source](mtParams), 5000).catch(() => []));
-      const mtResults = (await Promise.all(mtPromises)).flat();
+      // MT source: always use OpenSubtitles for the English base subtitle
+      // (most reliable quality and download counts for accurate selection)
+      const mtResults = await withTimeout(
+        signal => openSubtitles(mtParams),
+        5000
+      ).catch(() => []);
 
       if (mtResults.length > 0) {
         // Pick the most downloaded English subtitle — higher downloads = better quality
