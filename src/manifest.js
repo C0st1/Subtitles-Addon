@@ -2,10 +2,10 @@
 
 module.exports = {
   id: "community.subtitle-hub",
-  version: "1.1.0",
+  version: "1.2.0",
   name: "Subtitle Hub",
   // Serve logo from the addon's own domain (prevents broken logo if GitHub repo changes)
-  logo: "https://raw.githubusercontent.com/C0st1/Subtitles-Addon/refs/heads/main/public/logo.png",
+  logo: "/logo.png",
   description: "Fetches subtitles from OpenSubtitles, SubDL, SubSource",
   resources: ["subtitles"],
   types: ["movie", "series"],

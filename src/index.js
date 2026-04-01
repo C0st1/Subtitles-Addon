@@ -1,28 +1,95 @@
 'use strict';
 
+const { AsyncLocalStorage } = require('async_hooks');
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const crypto = require('crypto');
 const { getRouter } = require('stremio-addon-sdk');
 const addonInterface = require('./addon');
 const proxyRoute = require('./routes/subtitle-proxy');
 const logger = require('./utils/logger');
 
-const app = express();
+// --- Request-scoped storage (replaces process.env mutation) ---
+const asyncLocalStorage = new AsyncLocalStorage();
 
-app.set('trust proxy', 1); // Trust 1 proxy layer (Vercel edge) — satisfies express-rate-limit
+/**
+ * Generate a CSP nonce for inline scripts.
+ */
+function generateNonce() {
+  return crypto.randomBytes(16).toString('base64');
+}
+
+// --- Allowed config keys whitelist ---
+const ALLOWED_CONFIG_KEYS = new Set([
+  'opensubtitles_api_key',
+  'subdl_api_key',
+  'subsource_api_key',
+  'languages',
+  'enabled_sources',
+  'addon_host',
+]);
+
+/**
+ * Sanitize config object: keep only whitelisted keys, strip everything else.
+ * @param {object} configObj
+ * @returns {object}
+ */
+function sanitizeConfig(configObj) {
+  const sanitized = {};
+  for (const key of Object.keys(configObj)) {
+    if (ALLOWED_CONFIG_KEYS.has(key)) {
+      sanitized[key] = configObj[key];
+    }
+  }
+  return sanitized;
+}
+
+const app = express();
+app.set('trust proxy', 1); // Trust 1 proxy layer (Vercel edge)
+
+// --- Security headers via helmet ---
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", (req, res) => {
+        // Generate and attach a nonce for inline scripts in configure.html
+        const nonce = generateNonce();
+        res.locals.cspNonce = nonce;
+        return `'nonce-${nonce}'`;
+      }],
+      styleSrc: ["'self'", "https://fonts.googleapis.com"],
+      fontSrc: ["https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https://raw.githubusercontent.com"],
+      connectSrc: ["'self'"],
+    },
+  },
+}));
+
+// --- Body size limit ---
+app.use(express.json({ limit: '100kb' }));
+
 app.use(cors());
 
-// Add request ID for log correlation in serverless environments
+// --- Request ID via AsyncLocalStorage (replaces process.env mutation) ---
 app.use((req, res, next) => {
-  process.env.__REQUEST_ID__ = req.headers['x-vercel-id'] ||
+  const requestId = req.headers['x-vercel-id'] ||
     req.headers['x-request-id'] ||
-    `req-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-  next();
+    `req-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+
+  asyncLocalStorage.run({ requestId }, () => {
+    next();
+  });
 });
 
-// Global rate limiting
+// Expose a helper so the logger can read request-scoped data
+app.set('asyncLocalStorage', asyncLocalStorage);
+
+// --- Global rate limiting ---
 const globalLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 60000,
   max: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100,
@@ -35,21 +102,35 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// Serve configure page
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/configure.html'));
+// --- Health check endpoint ---
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: require('./manifest').version,
+  });
 });
 
-app.get('/configure', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/configure.html'));
-});
+// --- Serve configure page (with CSP nonce injection for inline scripts) ---
+const configureHtml = fs.readFileSync(path.join(__dirname, '../public/configure.html'), 'utf8');
 
-// Serve logo as static asset (avoids dependency on external GitHub URL)
+function sendConfigurePage(req, res) {
+  const nonce = res.locals.cspNonce || generateNonce();
+  res.locals.cspNonce = nonce;
+  const html = configureHtml.replace(/\{\{CSP_NONCE\}\}/g, nonce);
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+}
+
+app.get('/', sendConfigurePage);
+app.get('/configure', sendConfigurePage);
+
+// --- Serve logo as static asset ---
 app.get('/logo.png', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/logo.png'));
 });
 
-// Stricter rate limit for subtitle proxy (potential SSRF target)
+// --- Stricter rate limit for subtitle proxy ---
 const proxyLimiter = rateLimit({
   windowMs: 60000,
   max: 30,
@@ -66,12 +147,7 @@ app.get('/subtitle/:provider/:subtitleId.:ext', proxyLimiter, proxyRoute);
 
 /**
  * Config middleware: decodes base64url-encoded config from URL path segment.
- * This is the standard Stremio addon configuration pattern.
- *
- * Security notes:
- * - API keys in the URL config are only used for provider API queries (handler side).
- * - Subtitle proxy URLs use only env vars for API keys (stripped from URL-safe config).
- * - Host header is validated to prevent injection attacks.
+ * Applies whitelist validation to prevent config key injection.
  */
 app.use((req, res, next) => {
   const match = req.url.match(/^\/([a-zA-Z0-9-_]+)\/(.*)$/);
@@ -81,7 +157,7 @@ app.use((req, res, next) => {
       while (b64.length % 4) b64 += '=';
       const decoded = Buffer.from(b64, 'base64').toString('utf8');
 
-      const configObj = JSON.parse(decoded);
+      let configObj = JSON.parse(decoded);
 
       // Reject arrays and non-objects
       if (Array.isArray(configObj) || typeof configObj !== 'object' || configObj === null) {
@@ -95,11 +171,14 @@ app.use((req, res, next) => {
         logger.warn('system', 'Invalid Host header rejected', { rawHost });
         throw new Error("Invalid host header");
       }
+
+      // Whitelist config keys — strip any unknown keys
+      configObj = sanitizeConfig(configObj);
       configObj.addon_host = sanitizedHost;
 
       req.url = `/${encodeURIComponent(JSON.stringify(configObj))}/${match[2]}`;
     } catch (e) {
-      // Log parse/validation errors for debugging (was previously silently swallowed)
+      // Log parse/validation errors for debugging
       if (e.message && !e.message.includes('Invalid config') && !e.message.includes('Invalid host')) {
         logger.warn('system', `Config decode failed: ${e.message}`);
       }
@@ -112,28 +191,18 @@ app.use((req, res, next) => {
 /**
  * Sanitize the Host header to prevent injection attacks.
  * Only allows valid hostnames (domain names, IPs, host:port).
- * Rejects obviously malicious values containing protocols, paths, or query strings.
- * @param {string} host
- * @returns {string|null} Sanitized host, or null if invalid
  */
 function sanitizeHost(host) {
   if (!host || typeof host !== 'string') return null;
   const trimmed = host.trim();
 
-  // Reject if it contains a protocol scheme (e.g., "http://" or "//")
   if (trimmed.includes('://') || trimmed.startsWith('//')) return null;
-
-  // Reject if it contains path separators or query strings
   if (trimmed.includes('/') || trimmed.includes('?') || trimmed.includes('#')) return null;
-
-  // Reject if it contains whitespace or control characters
   if (/\s/.test(trimmed)) return null;
 
-  // Validate basic hostname format
   const hostPattern = /^[a-zA-Z0-9]([a-zA-Z0-9.\-]*[a-zA-Z0-9])?(:\d{1,5})?$/;
   if (!hostPattern.test(trimmed)) return null;
 
-  // Validate port number if present (1-65535)
   const portMatch = trimmed.match(/:(\d+)$/);
   if (portMatch) {
     const port = parseInt(portMatch[1], 10);
