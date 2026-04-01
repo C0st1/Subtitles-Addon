@@ -83,10 +83,14 @@ module.exports = async (args) => {
     const results = await Promise.all(promises);
     const subtitles = results.flatMap(r => r);
 
-    // Build proxy config WITHOUT API keys (FIX: avoid embedding secrets in URLs).
-    // The proxy falls back to env vars for API keys.
+    // Build proxy config with API keys (required for subtitle downloads).
+    // The proxy config is base64-encoded and passed as a query parameter.
+    // This is the standard Stremio config-via-URL architecture.
     const proxyConfig = {
       addon_host: config.addon_host,
+      opensubtitles_api_key: config.opensubtitles_api_key || '',
+      subdl_api_key: config.subdl_api_key || '',
+      subsource_api_key: config.subsource_api_key || '',
     };
 
     const configBase64 = Buffer.from(JSON.stringify(proxyConfig)).toString('base64url');
@@ -99,10 +103,21 @@ module.exports = async (args) => {
 
       const proxyUrl = `${baseUrl}/subtitle/${sub.provider}/${sub.id}.vtt?config=${configBase64}`;
 
+      // Normalize bibliographic codes to terminological codes (e.g. rum -> ron)
+      // to prevent duplicate language tabs in Stremio
+      let lang = sub.lang;
+      if (lang === 'rum') lang = 'ron';
+      if (lang === 'fra') lang = 'fre';
+      if (lang === 'deu') lang = 'ger';
+      if (lang === 'ell') lang = 'gre';
+      if (lang === 'nld') lang = 'dut';
+      if (lang === 'ces') lang = 'cze';
+      if (lang === 'zho') lang = 'chi';
+
       return {
         id: `${sub.provider}-${sub.id}`,
         url: proxyUrl,
-        lang: sub.lang
+        lang
       };
     });
 
