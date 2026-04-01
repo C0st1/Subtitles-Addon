@@ -64,9 +64,11 @@ async function translate(text, sourceLang, targetLang) {
         timeout: 10000,
       });
       // Response format: [[['translated', 'original', ...], ...], ...]
-      if (response?.data) {
-        const translated = response.data
-          .filter(item => Array.isArray(item) && item[0])
+      // response.data[0] = array of translation segments, each: [translatedText, originalText, ...]
+      // Later elements contain metadata (language codes, confidence, model info) — must NOT be included
+      if (response?.data && Array.isArray(response.data[0])) {
+        const translated = response.data[0]
+          .filter(item => Array.isArray(item) && typeof item[0] === 'string')
           .map(item => item[0])
           .join('');
         return translated || null;
@@ -123,8 +125,9 @@ async function translate(text, sourceLang, targetLang) {
 }
 
 /**
- * Translate subtitle lines in batch (chunks of 20 lines for efficiency).
- * @param {string[]} lines - Array of subtitle text lines
+ * Translate subtitle lines in batch (chunks of 15 items for efficiency).
+ * Uses a unique separator to safely handle multi-line text within items.
+ * @param {string[]} lines - Array of subtitle text items (may contain newlines)
  * @param {string} sourceLang
  * @param {string} targetLang
  * @returns {Promise<string[]>} Translated lines (unchanged if translation fails)
@@ -132,16 +135,26 @@ async function translate(text, sourceLang, targetLang) {
 async function translateBatch(lines, sourceLang, targetLang) {
   if (!lines || lines.length === 0) return lines;
 
-  const CHUNK_SIZE = 20;
+  const CHUNK_SIZE = 15;
   const results = [];
+  // Unique separator unlikely to appear in subtitle text
+  const SEP = '\n|||';
 
   for (let i = 0; i < lines.length; i += CHUNK_SIZE) {
     const chunk = lines.slice(i, i + CHUNK_SIZE);
-    const text = chunk.join('\n');
+    const text = chunk.join(SEP);
 
     const translated = await translate(text, sourceLang, targetLang);
     if (translated) {
-      results.push(...translated.split('\n'));
+      const splitResult = translated.split(SEP);
+      if (splitResult.length === chunk.length) {
+        // Exact match — safe to use translated items
+        results.push(...splitResult);
+      } else {
+        // Line count mismatch — keep originals to prevent subtitle corruption
+        logger.warn('translation', `Chunk size mismatch: expected ${chunk.length}, got ${splitResult.length}. Keeping originals.`);
+        results.push(...chunk);
+      }
     } else {
       // On failure, keep original lines so the subtitle isn't broken
       results.push(...chunk);

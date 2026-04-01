@@ -584,6 +584,76 @@ const proxyLimiter = rateLimit({
 });
 
 // =========================================================================
+//  Subtitle parsing helpers (for MT translate route)
+// =========================================================================
+
+/**
+ * Parse SRT/VTT content into structured cue objects.
+ * Unlike line-level parsing, this preserves multi-line text within each cue
+ * and doesn't break when translation changes internal line counts.
+ *
+ * @param {string} text - Raw SRT or VTT subtitle text
+ * @returns {Array<{index: string, timestamp: string, text: string}>}
+ */
+function parseSubtitles(text) {
+  const cues = [];
+  // Split on double newlines (blank line separator between cues)
+  const blocks = text.trim().split(/\n\s*\n/);
+
+  for (const block of blocks) {
+    const lines = block.split(/\r?\n/);
+    if (lines.length < 2) continue;
+
+    // Skip WEBVTT header blocks
+    const firstLine = lines[0].trim();
+    if (firstLine.startsWith('WEBVTT') || firstLine.startsWith('NOTE')) continue;
+
+    // Find the timestamp line (contains "-->")
+    let tsIdx = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes('-->')) {
+        tsIdx = i;
+        break;
+      }
+    }
+    if (tsIdx === -1) continue;
+
+    // Everything before the timestamp line that's a number = cue index
+    const indexLine = tsIdx > 0 ? lines.slice(0, tsIdx).find(l => /^\d+$/.test(l.trim())) || '' : '';
+    const timestampLine = lines[tsIdx].trim();
+
+    // Everything after the timestamp is text (may span multiple lines)
+    const textLines = lines.slice(tsIdx + 1)
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+
+    if (!timestampLine || textLines.length === 0) continue;
+
+    cues.push({
+      index: indexLine,
+      timestamp: timestampLine,
+      text: textLines.join('\n'),
+    });
+  }
+
+  return cues;
+}
+
+/**
+ * Convert plain SRT text (already UTF-8 decoded) to WebVTT format.
+ * Unlike srtToVtt() from converter.js, this doesn't re-decode the buffer.
+ * @param {string} srtText - Plain SRT text in UTF-8
+ * @returns {string} WebVTT formatted text
+ */
+function srtTextToVtt(srtText) {
+  const text = srtText.trim();
+  if (text.startsWith('WEBVTT')) return text;
+  // Replace SRT comma-based milliseconds with VTT dot-based
+  const converted = text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+  return 'WEBVTT\n\n' + converted;
+}
+
+// =========================================================================
 //  Translation proxy route (MUST be before the generic :provider route)
 // =========================================================================
 
@@ -683,33 +753,32 @@ app.get('/subtitle/translate/:payload.:ext', proxyLimiter, async (req, res) => {
       return res.status(502).send('Failed to fetch original subtitle.');
     }
 
-    // Parse SRT content and translate lines
+    // Parse SRT/VTT into structured cues, translate each cue's full text as a unit
     const targetLang = targetLangs.split(',')[0] || 'eng';
-    const srtLines = originalContent.split('\n');
-    const textLines = [];
-    const lineIndices = []; // Track which lines are subtitle text (not numbers/timestamps)
+    const cues = parseSubtitles(originalContent);
 
-    for (let i = 0; i < srtLines.length; i++) {
-      const trimmed = srtLines[i].trim();
-      // Detect subtitle text lines (not index numbers or timestamps)
-      if (trimmed && !/^\d+$/.test(trimmed) && !/^\d{2}:\d{2}/.test(trimmed) && trimmed !== '') {
-        textLines.push(trimmed);
-        lineIndices.push(i);
-      }
+    if (cues.length === 0) {
+      return res.status(502).send('No subtitle cues found in file.');
     }
 
-    // Translate the text lines in batch
-    const translatedLines = await translateBatch(textLines, sourceLang, targetLang);
+    // Collect cue texts for batch translation (each cue's full text = one unit)
+    const cueTexts = cues.map(c => c.text);
+    const translatedTexts = await translateBatch(cueTexts, sourceLang, targetLang);
 
-    // Rebuild SRT with translated lines
-    for (let j = 0; j < lineIndices.length; j++) {
-      if (j < translatedLines.length) {
-        srtLines[lineIndices[j]] = translatedLines[j];
-      }
+    // Rebuild SRT with translated cue texts, preserving structure
+    const rebuiltLines = cues.map((cue, i) => {
+      const text = i < translatedTexts.length ? translatedTexts[i] : cue.text;
+      return `${cue.index}\n${cue.timestamp}\n${text}`;
+    });
+    const translatedSrt = rebuiltLines.join('\n\n');
+
+    // Convert to VTT if needed (simple text conversion, no re-decoding)
+    let finalContent;
+    if (isSrt) {
+      finalContent = translatedSrt;
+    } else {
+      finalContent = srtTextToVtt(translatedSrt);
     }
-
-    const translatedSrt = srtLines.join('\n');
-    const finalContent = isSrt ? translatedSrt : srtToVtt(Buffer.from(translatedSrt, 'utf8'), sourceLang);
 
     await cacheSet(cacheKey, finalContent, 86400);
     recordAnalyticsEvent('subtitle_served', { provider: 'machine-translation', targetLang });
