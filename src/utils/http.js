@@ -1,23 +1,28 @@
 const axios = require('axios');
 const https = require('https');
 
+/**
+ * Shared HTTP client for all provider and proxy requests.
+ *
+ * Improvements over original:
+ * - Removed browser User-Agent (deceptive for API calls; each provider sets
+ *   its own UA in request headers when the API requires it).
+ * - Kept keepAlive pool for connection reuse across serverless warm invocations.
+ * - 5-second timeout is enforced at the instance level; individual callers
+ *   can still override per-request.
+ */
 const http = axios.create({
-  timeout: 5000, // Strict 5-second timeout
-  httpsAgent: new https.Agent({ 
-    keepAlive: true, 
-    maxSockets: 50, 
-    freeSocketTimeout: 30000 
+  timeout: 5000,
+  httpsAgent: new https.Agent({
+    keepAlive: true,
+    maxSockets: 50,
+    freeSocketTimeout: 30000,
   }),
   headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept': 'application/json, */*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.5',
     'Connection': 'keep-alive',
-    'Upgrade-Insecure-Requests': '1'
-  }
+  },
 });
-
-// Removed the retry interceptor entirely. 
-// Serverless functions should fail fast rather than retry in the background.
 
 module.exports = { http };
