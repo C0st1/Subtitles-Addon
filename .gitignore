@@ -1,4 +1,11 @@
 node_modules/
 .env
+.env.*
+!.env.example
 .vercel/
+*.log
 npm-debug.log
+.DS_Store
+coverage/
+.vscode/
+dist/
