@@ -1,11 +1,14 @@
+'use strict';
+
 /**
  * Parse a Stremio content ID into its components.
  * @param {string} id - e.g., "tt0111161" or "tt0903747:1:1"
  * @returns {{ imdbId: string, imdbIdFull: string, season: number|null, episode: number|null }}
+ * @throws {Error} If the ID format is invalid
  */
 function parseId(id) {
   const match = id.match(/^(tt\d+)(?::(\d+):(\d+))?$/);
-  if (!match) throw new Error(`Invalid Stremio ID format: ${id}`);
+  if (!match) throw new Error(`Invalid Stremio ID format`);
   return {
     imdbIdFull: match[1],
     imdbId: match[1].replace('tt', ''),
