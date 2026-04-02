@@ -103,7 +103,7 @@ module.exports = async (req, res) => {
           {
             headers: {
               'Api-Key': apiKey,
-              'User-Agent': 'SubtitleHub/1.1.0',
+              'User-Agent': 'SubtitleHub/1.3.0',
               'Accept': 'application/json'
             }
           }
