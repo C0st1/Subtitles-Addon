@@ -16,7 +16,7 @@ const http = axios.create({
     freeSocketTimeout: 30000
   }),
   headers: {
-    'User-Agent': 'SubtitleHub/1.1.0',
+    'User-Agent': 'SubtitleHub/1.3.0',
     'Accept': 'application/json, text/plain, */*',
     'Accept-Language': 'en-US,en;q=0.5',
     'Connection': 'keep-alive'
