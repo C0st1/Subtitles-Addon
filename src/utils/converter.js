@@ -1,117 +1,155 @@
-'use strict';
+/**
+ * Subtitle Format Converter and Sanitizer
+ * Comprehensive utility for converting between SRT and WebVTT formats,
+ * normalizing timestamps, cleaning empty cues, and stripping unwanted formatting tags.
+ */
 
-const chardet = require('chardet');
-const iconv = require('iconv-lite');
+// Strip ASS/SSA override tags such as {\an8}, {\pos(x,y)}, {\c&H000000&}, etc.
+const ASS_TAG_REGEX = /\{\\[^}]+\}/g;
+
+// Strip standard HTML formatting tags if needed (<i>, <b>, <u>, <font>, etc.)
+const HTML_TAG_REGEX = /<\/?[^>]+(>|$)/g;
 
 /**
- * Decodes the raw buffer using chardet and returns a clean UTF-8 string.
- * @param {Buffer} buffer - Raw subtitle file buffer
- * @param {string} lang - ISO 639-2 language code hint for encoding detection
- * @returns {string} Decoded UTF-8 text
+ * Removes ASS/SSA positioning and formatting tags from subtitle text.
+ * @param {string} text - Raw subtitle string
+ * @param {boolean} [stripHtml=false] - Whether to also strip HTML tags
+ * @returns {string} - Cleaned subtitle string
  */
-function decodeSrt(buffer, lang = '') {
-  let encoding = chardet.detect(buffer) || 'utf8';
-
-  // Fix chardet misidentifying Windows-1250 (Central/Eastern European) as Windows-1252
-  const easternLangs = ['ron', 'rum', 'hun', 'cze', 'pol', 'slv', 'hrv', 'srp', 'bos'];
-  if (easternLangs.includes(lang.toLowerCase()) &&
-      ['ISO-8859-1', 'windows-1252'].includes(encoding)) {
-    encoding = 'windows-1250';
-  }
-
-  if (!iconv.encodingExists(encoding)) {
-    encoding = 'utf8';
-  }
-
-  let text = iconv.decode(buffer, encoding);
-  return text.replace(/^\uFEFF/, ''); // Strip BOM
-}
-
-/**
- * Converts basic ASS/SSA subtitle format to SRT.
- * Extracts [Events] dialogue lines, converts timestamps, and strips formatting tags.
- * This is a best-effort conversion - complex ASS features (positioning, effects)
- * cannot be represented in SRT.
- * @param {string} assText - ASS/SSA formatted subtitle text
- * @returns {string} SRT formatted subtitle text
- */
-function assToSrt(assText) {
-  const lines = assText.split(/\r?\n/);
-  const dialogues = [];
-  let index = 1;
-
-  for (const line of lines) {
-    if (!line.startsWith('Dialogue:')) continue;
-
-    // ASS format: Dialogue: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
-    const parts = line.substring(9).split(',', 10);
-    if (parts.length < 10) continue;
-
-    const start = assTimestampToSrt(parts[1].trim());
-    const end = assTimestampToSrt(parts[2].trim());
-    let text = parts[9].trim();
-
-    // Remove ASS formatting tags: {\...}, but preserve text content within simple tags
-    text = text.replace(/\{[^}]*\}/g, '');
-    // Convert ASS line breaks (\N) to SRT line breaks
-    text = text.replace(/\\[Nn]/g, '\n');
-    // Remove leading/trailing whitespace
-    text = text.trim();
-
-    if (text && start && end) {
-      dialogues.push(`${index}\n${start},000 --> ${end},000\n${text}\n`);
-      index++;
+function cleanSubtitleText(text, stripHtml = false) {
+    if (!text || typeof text !== 'string') return '';
+    
+    // Remove {\an1} through {\an9} and all other ASS/SSA formatting overrides
+    let cleaned = text.replace(ASS_TAG_REGEX, '');
+    
+    if (stripHtml) {
+        cleaned = cleaned.replace(HTML_TAG_REGEX, '');
     }
-  }
-
-  return dialogues.join('\n');
+    
+    return cleaned.trim();
 }
 
 /**
- * Convert ASS timestamp (H:MM:SS.CC) to SRT timestamp (HH:MM:SS,CCC).
- * @param {string} assTs - ASS timestamp e.g., "0:02:17.44"
- * @returns {string} SRT timestamp e.g., "00:02:17,440"
+ * Normalizes line endings and removes Byte Order Marks (BOM).
+ * @param {string} content - Raw file content
+ * @returns {string} - Normalized string
  */
-function assTimestampToSrt(assTs) {
-  const parts = assTs.split(':');
-  if (parts.length !== 3) return '00:00:00';
-
-  const h = parts[0].padStart(2, '0');
-  const m = parts[1].padStart(2, '0');
-  const secParts = parts[2].split('.');
-  const s = secParts[0].padStart(2, '0');
-  const ms = (secParts[1] || '0').padEnd(3, '0').substring(0, 3);
-
-  return `${h}:${m}:${s},${ms}`;
+function normalizeContent(content) {
+    if (!content) return '';
+    return content
+        .replace(/^\uFEFF/, '') // Remove UTF-8 BOM if present
+        .replace(/\r\n|\r/g, '\n'); // Normalize carriage returns to standard newlines
 }
 
 /**
- * Convert SRT buffer to WebVTT format.
- * Handles SRT, ASS/SSA, and VTT input formats.
- * @param {Buffer} buffer - Raw subtitle file buffer
- * @param {string} lang - ISO 639-2 language code hint for encoding detection
- * @returns {string} WebVTT formatted subtitle text
+ * Converts SRT subtitle content to WebVTT format.
+ * Handles timestamp conversion, ASS tag stripping, and structure cleanup.
+ * @param {string} srtContent - Raw SRT subtitle string
+ * @returns {string} - Converted WebVTT string
  */
-function srtToVtt(buffer, lang = '') {
-  let text = decodeSrt(buffer, lang);
-  const trimmed = text.trim();
+function srtToVtt(srtContent) {
+    if (!srtContent) return '';
 
-  // Already VTT - return as-is
-  if (trimmed.startsWith('WEBVTT')) {
-    return text;
-  }
+    let cleaned = normalizeContent(srtContent);
 
-  // ASS/SSA format - convert to SRT first, then to VTT
-  if (trimmed.startsWith('[Script Info]')) {
-    text = assToSrt(text);
-    return 'WEBVTT\n\n' + text;
-  }
+    // Split into subtitle cue blocks
+    const blocks = cleaned.split('\n\n');
+    const vttCues = [];
 
-  // SRT format - convert to VTT
-  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  text = text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+    for (const block of blocks) {
+        const lines = block.trim().split('\n');
+        if (lines.length < 2) continue;
 
-  return 'WEBVTT\n\n' + text;
+        // Check if the first line is an SRT cue index number and remove it
+        let timestampLineIndex = 0;
+        if (/^\d+$/.test(lines[0])) {
+            timestampLineIndex = 1;
+        }
+
+        const timestampLine = lines[timestampLineIndex];
+        if (!timestampLine || !timestampLine.includes('-->')) continue;
+
+        // Convert SRT commas to VTT periods in timestamps (00:00:00,000 --> 00:00:00.000)
+        const vttTimestamp = timestampLine.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+
+        // Extract and clean the actual dialogue text
+        const dialogueLines = lines.slice(timestampLineIndex + 1);
+        const cleanedDialogue = dialogueLines
+            .map(line => cleanSubtitleText(line))
+            .filter(line => line.length > 0)
+            .join('\n');
+
+        // Only add cue if there is dialogue remaining after cleaning
+        if (cleanedDialogue) {
+            vttCues.push(`${vttTimestamp}\n${cleanedDialogue}`);
+        }
+    }
+
+    return 'WEBVTT\n\n' + vttCues.join('\n\n');
 }
 
-module.exports = { decodeSrt, srtToVtt };
+/**
+ * Converts WebVTT subtitle content back to standard SRT format.
+ * @param {string} vttContent - Raw WebVTT subtitle string
+ * @returns {string} - Converted SRT string
+ */
+function vttToSrt(vttContent) {
+    if (!vttContent) return '';
+
+    let cleaned = normalizeContent(vttContent);
+    
+    // Strip WEBVTT header, NOTE blocks, and STYLE blocks
+    cleaned = cleaned
+        .replace(/^WEBVTT[^\n]*\n+/i, '')
+        .replace(/^NOTE[\s\S]*?(?=\n\n|$)/gim, '')
+        .replace(/^STYLE[\s\S]*?(?=\n\n|$)/gim, '');
+
+    const blocks = cleaned.split('\n\n');
+    const srtCues = [];
+    let cueCounter = 1;
+
+    for (const block of blocks) {
+        const lines = block.trim().split('\n');
+        if (lines.length < 2) continue;
+
+        // Find which line contains the timestamp arrow
+        const timestampIndex = lines.findIndex(line => line.includes('-->'));
+        if (timestampIndex === -1) continue;
+
+        // Convert VTT periods back to SRT commas in timestamps
+        const srtTimestamp = lines[timestampIndex].replace(/(\d{2}:\d{2}:\d{2})\.(\d{3})/g, '$1,$2');
+
+        const dialogueLines = lines.slice(timestampIndex + 1);
+        const cleanedDialogue = dialogueLines
+            .map(line => cleanSubtitleText(line))
+            .filter(line => line.length > 0)
+            .join('\n');
+
+        if (cleanedDialogue) {
+            srtCues.push(`${cueCounter}\n${srtTimestamp}\n${cleanedDialogue}`);
+            cueCounter++;
+        }
+    }
+
+    return srtCues.join('\n\n');
+}
+
+/**
+ * Sanitizes an existing SRT string without converting its format.
+ * @param {string} srtContent - Raw SRT string
+ * @returns {string} - Sanitized SRT string
+ */
+function cleanSrt(srtContent) {
+    if (!srtContent) return '';
+    return vttToSrt(srtToVtt(srtContent)); // Cycle through parser to guarantee clean formatting
+}
+
+module.exports = {
+    cleanSubtitleText,
+    normalizeContent,
+    srtToVtt,
+    vttToSrt,
+    cleanSrt,
+    ASS_TAG_REGEX,
+    HTML_TAG_REGEX
+};

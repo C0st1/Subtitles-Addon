@@ -10,6 +10,15 @@ const logger = require('./logger');
 //   "deepl"             — best quality, 500k chars/month free tier
 
 /**
+ * Strips ASS/SSA positioning and formatting tags (like {\an8}, {\pos(x,y)}, etc.)
+ * from subtitle text so they don't get translated or break formatting.
+ */
+function stripAssTags(text) {
+  if (!text || typeof text !== 'string') return text;
+  return text.replace(/\{\\[^}]+\}/g, '');
+}
+
+/**
  * Translate text using a configured translation backend.
  *
  * Supported backends (via MT_SERVICE_TYPE env var):
@@ -18,7 +27,7 @@ const logger = require('./logger');
  *   - "libretranslate": Self-hosted only (public demo now requires API key)
  *       Needs: MT_SERVICE_URL, MT_SERVICE_KEY
  *       Auth: Authorization: ApiKey <key>
- *   - "deepl": Best translation quality
+ *   - "deepl": Best quality translation
  *       Needs: MT_SERVICE_URL=https://api-free.deepl.com/v2, MT_SERVICE_KEY
  *       Auth: Authorization: DeepL-Auth-Key <key>
  *
@@ -33,6 +42,9 @@ async function translate(text, sourceLang, targetLang) {
   const mtApiKey = process.env.MT_SERVICE_KEY || '';
 
   if (!text || !sourceLang || !targetLang || sourceLang === targetLang) return text;
+
+  // FIX: Strip ASS/SSA tags before sending to translation APIs to prevent corruption
+  text = stripAssTags(text);
 
   // Normalize language codes to ISO 639-1 for translation APIs
   const langMap = {
@@ -71,7 +83,7 @@ async function translate(text, sourceLang, targetLang) {
           .filter(item => Array.isArray(item) && typeof item[0] === 'string')
           .map(item => item[0])
           .join('');
-        return translated || null;
+        return translated ? stripAssTags(translated) : null;
       }
       return null;
 
@@ -93,7 +105,8 @@ async function translate(text, sourceLang, targetLang) {
         },
         timeout: 10000,
       });
-      return response?.data?.translations?.[0]?.text || null;
+      const resText = response?.data?.translations?.[0]?.text || null;
+      return resText ? stripAssTags(resText) : null;
 
     } else {
       // LibreTranslate — self-hosted only
@@ -116,7 +129,8 @@ async function translate(text, sourceLang, targetLang) {
         timeout: 10000,
       });
 
-      return response?.data?.translatedText || null;
+      const resText = response?.data?.translatedText || null;
+      return resText ? stripAssTags(resText) : null;
     }
   } catch (error) {
     logger.warn('translation', `MT failed [${serviceType}]: ${error.message}`);
@@ -145,8 +159,8 @@ async function translateBatch(lines, sourceLang, targetLang) {
   for (let i = 0; i < lines.length; i += CHUNK_SIZE) {
     const chunk = lines.slice(i, i + CHUNK_SIZE);
 
-    // Wrap each cue in numbered XML tags — Google Translate preserves these intact
-    const tagged = chunk.map((line, idx) => `<${idx + 1}>${line}</${idx + 1}>`).join('\n');
+    // FIX: Strip ASS tags from individual cues before wrapping them in numbered XML tags
+    const tagged = chunk.map((line, idx) => `<${idx + 1}>${stripAssTags(line)}</${idx + 1}>`).join('\n');
 
     const translated = await translate(tagged, sourceLang, targetLang);
     if (translated) {
@@ -161,7 +175,8 @@ async function translateBatch(lines, sourceLang, targetLang) {
         const endIdx = translated.indexOf(closeTag);
 
         if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-          extracted.push(translated.substring(startIdx + openTag.length, endIdx));
+          const rawExtracted = translated.substring(startIdx + openTag.length, endIdx);
+          extracted.push(stripAssTags(rawExtracted).trim());
         } else {
           allMatched = false;
           break;
@@ -177,8 +192,8 @@ async function translateBatch(lines, sourceLang, targetLang) {
       logger.warn('translation', `Tag extraction failed for chunk at offset ${i}. Keeping originals.`);
     }
 
-    // Fallback: keep original lines
-    results.push(...chunk);
+    // Fallback: keep original lines (with tags stripped just in case)
+    results.push(...chunk.map(line => stripAssTags(line)));
   }
 
   return results;
