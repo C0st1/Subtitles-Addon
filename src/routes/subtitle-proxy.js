@@ -2,7 +2,7 @@
 
 const { LRUCache } = require('lru-cache');
 const logger = require('../utils/logger');
-const { srtToVtt, decodeSrt, stripAssOverrideTags } = require('../utils/converter');
+const { srtToVtt, decodeSrt } = require('../utils/converter');
 const { extractSrt, isArchive } = require('../utils/zip');
 const { http } = require('../utils/http');
 const { validateUrl } = require('../utils/url-validator');
@@ -196,12 +196,7 @@ module.exports = async (req, res) => {
         return sendError(res, 400, 'Unknown provider.');
     }
 
-    // For .srt requests, decode encoding then strip any ASS override tags
-    // (e.g. `{\an8}`) that some providers embed inside SRT files. For .vtt
-    // requests, srtToVtt() already strips them internally.
-    const finalContent = isSrt
-      ? stripAssOverrideTags(decodeSrt(subBuffer, payload.lang))
-      : srtToVtt(subBuffer, payload.lang);
+    const finalContent = isSrt ? decodeSrt(subBuffer, payload.lang) : srtToVtt(subBuffer, payload.lang);
 
     // Cache the result
     cache.set(cacheKey, finalContent);
