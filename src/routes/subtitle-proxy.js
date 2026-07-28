@@ -19,15 +19,6 @@ const cache = new LRUCache({
 const MAX_SUBTITLE_SIZE = 50 * 1024 * 1024;
 
 /**
- * Strips ASS/SSA positioning and formatting tags (like {\an8}, {\pos(x,y)}, etc.)
- * from subtitle text so they don't render as raw text in video players.
- */
-function stripAssTags(text) {
-  if (!text || typeof text !== 'string') return text;
-  return text.replace(/\{\\[^}]+\}/g, '');
-}
-
-/**
  * Send an error response with appropriate HTTP status code.
  */
 function sendError(res, statusCode, message) {
@@ -77,7 +68,7 @@ module.exports = async (req, res) => {
     const langHint = payload.lang || '';
     const cacheKey = `${ext}:${provider}:${subtitleId}:${langHint}`;
 
-    // Single cache check
+    // Single cache check (FIX: removed dead first check without langHint)
     if (cache.has(cacheKey)) {
       res.setHeader('Content-Type', isSrt ? 'text/plain; charset=utf-8' : 'text/vtt; charset=utf-8');
       res.setHeader('Access-Control-Allow-Origin', '*');
@@ -205,11 +196,7 @@ module.exports = async (req, res) => {
         return sendError(res, 400, 'Unknown provider.');
     }
 
-    // Decode / Convert subtitle content
-    let finalContent = isSrt ? decodeSrt(subBuffer, payload.lang) : srtToVtt(subBuffer, payload.lang);
-
-    // FIX: Strip ASS/SSA positioning tags ({\an8}, etc.) before caching and serving
-    finalContent = stripAssTags(finalContent);
+    const finalContent = isSrt ? decodeSrt(subBuffer, payload.lang) : srtToVtt(subBuffer, payload.lang);
 
     // Cache the result
     cache.set(cacheKey, finalContent);
